@@ -1,0 +1,73 @@
+[project]
+name = "xrpfi-verif-copilot"
+version = "0.1.0"
+description = "XRPFi Verifiable Copilot — 2-agent system for XRP holders entering Flare DeFi"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    # Flare AI Kit (pinned commit f29d0a7 — 2026-05-04)
+    "flare-ai-kit @ git+https://github.com/flare-foundation/flare-ai-kit.git@f29d0a7dc8ae2066c414df040d92f61fc8dd521f",
+    # Agent framework
+    "google-adk>=1.19.0",
+    "google-genai>=1.51.0",
+    # Flare / EVM
+    "web3>=7.14.0",
+    # Data validation
+    "pydantic>=2.12.4",
+    # HTTP
+    "httpx>=0.28.1",
+    # Logging + observability
+    "structlog>=25.5.0",
+    # Retry
+    "tenacity>=9.0.0,<10.0.0",
+    # ENS
+    "eth-ens-namehash>=2.0.15",
+    # 0G storage (via HTTP API)
+    # (0G Python SDK — imported via HTTP client; no pip package yet)
+    # XRPL (for XRP address validation)
+    "xrpl-py>=4.0.0",
+    # Async support
+    "anyio>=4.9.0",
+    # Testing
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.25.3",
+    "pytest-cov>=6.1.0",
+    # Linting / type checking
+    "ruff>=0.11.0",
+    "mypy>=1.15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-mock>=3.14.0",
+    "respx>=0.22.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "SIM"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
