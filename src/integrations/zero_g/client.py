@@ -4,7 +4,7 @@ Upload priority:
   1. Official 0G TypeScript SDK via Node.js helper (contracts/storage_upload/upload.mjs)
   2. HTTP indexer fallback (simulated tx_hash when node unavailable)
 
-Galileo testnet by default (chain ID 80087).
+Network defaults read from environment variables (mainnet by default).
 """
 
 from __future__ import annotations
@@ -25,11 +25,13 @@ from src.contracts.decision_log import DecisionRecord
 
 logger = logging.getLogger(__name__)
 
-# 0G Galileo testnet (V3 — current active testnet as of 2026)
-ZERO_G_EVM_RPC = "https://evmrpc-testnet.0g.ai"
-ZERO_G_INDEXER_URL = "https://indexer-storage-testnet-turbo.0g.ai"
-ZERO_G_CHAIN_ID = 80087
-ZERO_G_EXPLORER = "https://chainscan-galileo.0g.ai"
+# 0G mainnet defaults — override via env vars
+ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://evmrpc-mainnet.0g.ai")
+ZERO_G_INDEXER_URL = os.environ.get(
+    "ZERO_G_STORAGE_URL", "https://indexer-storage-testnet-standard.0g.ai"
+)
+ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
+ZERO_G_EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
 
 
 class StorageResult(BaseModel):

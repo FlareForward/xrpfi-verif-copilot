@@ -47,8 +47,9 @@ except ImportError:
     from web3 import Web3
     from solcx import compile_source, install_solc
 
-RPC_URL = "https://evmrpc-testnet.0g.ai"
-CHAIN_ID = 80087
+RPC_URL = os.environ.get("ZERO_G_RPC_URL", "https://evmrpc-mainnet.0g.ai")
+CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
+EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
 
 sol_file = Path(__file__).parent / "XRPFiINFT.sol"
 source = sol_file.read_text()
@@ -80,7 +81,7 @@ if balance == 0:
     print("ERROR: No OG balance. Get testnet tokens first.")
     sys.exit(1)
 
-print("Deploying XRPFiINFT to Galileo testnet...")
+print(f"Deploying XRPFiINFT to 0G (Chain ID {CHAIN_ID})...")
 Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
 nonce = w3.eth.get_transaction_count(account.address)
 
@@ -100,7 +101,7 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 contract_address = receipt["contractAddress"]
 
 print(f"\n✅ XRPFiINFT deployed at: {contract_address}")
-print(f"   Explorer: https://chainscan-galileo.0g.ai/address/{contract_address}")
+print(f"   Explorer: {EXPLORER}/address/{contract_address}")
 
 # ---------------------------------------------------------------------------
 # Write address to .env

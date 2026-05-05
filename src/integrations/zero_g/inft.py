@@ -1,4 +1,4 @@
-"""0G iNFT minter — mints ERC-7857 AI agent NFTs on 0G Galileo testnet.
+"""0G iNFT minter — mints ERC-7857 AI agent NFTs on 0G mainnet.
 
 iNFT (intelligent NFT) is ERC-7857 on 0G. Each DecisionRecord history
 is minted as an iNFT, giving the judge a clickable proof on 0G explorer.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import UTC, datetime
 
 from pydantic import BaseModel
@@ -18,9 +19,9 @@ from src.contracts.decision_log import DecisionRecord
 
 logger = logging.getLogger(__name__)
 
-ZERO_G_EVM_RPC = "https://evmrpc-testnet.0g.ai"
-ZERO_G_EXPLORER = "https://chainscan-galileo.0g.ai"
-ZERO_G_CHAIN_ID = 80087
+ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://evmrpc-mainnet.0g.ai")
+ZERO_G_EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
+ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
 
 # ERC-7857 iNFT ABI — minimal interface for mint + tokenURI
 INFT_ABI = [

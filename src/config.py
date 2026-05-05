@@ -39,10 +39,15 @@ class Settings(BaseSettings):
         description="0G storage node endpoint",
     )
     zero_g_rpc_url: str = Field(
-        default="https://evmrpc-testnet.0g.ai",
-        description="0G EVM RPC endpoint",
+        default="https://evmrpc-mainnet.0g.ai",
+        description="0G EVM RPC endpoint (mainnet default)",
     )
-    zero_g_private_key: str | None = Field(default=None, description="0G testnet deployer key")
+    zero_g_chain_id: int = Field(default=16661, description="0G chain ID (16661 = mainnet)")
+    zero_g_explorer: str = Field(
+        default="https://chainscan.0g.ai",
+        description="0G block explorer base URL",
+    )
+    zero_g_private_key: str | None = Field(default=None, description="0G deployer key")
 
     # Uniswap
     uniswap_api_url: str = Field(
