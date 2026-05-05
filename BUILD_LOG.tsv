@@ -1,0 +1,5 @@
+date	surface	phase	start	end	status	commit	notes
+2026-05-04	ORCH	T01-T03 scaffold+0G+demo	18:08	18:50	PASS	93f1861	PR-0 76 LOC; ZeroGClient; INFTMinter; demo script; README; FEEDBACK.md
+2026-05-04	LANE-A	T06-T10 mint-helper	20:05	18:44	PASS	ba89b14	41→54 tests; FAssets+FDC+FTSO; ENS keccak fix; AXL node 1 publisher
+2026-05-04	LANE-B	T11-T15 yield-router	19:45	18:39	PASS	fd69cbe	67 tests; DeFi venues; UniswapClient; rebalance policy; AXL node 2
+2026-05-04	ORCH	T04 merge+gate+PRA	21:00	21:15	SHIPS	55415c1	151/151 tests; ruff clean; PRA 7/7=100%; 12 phase-boundary commits
