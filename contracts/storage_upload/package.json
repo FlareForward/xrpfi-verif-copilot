@@ -1,0 +1,16 @@
+{
+  "name": "storage_upload",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@0glabs/0g-ts-sdk": "^0.3.3",
+    "ethers": "^6.13.1"
+  }
+}

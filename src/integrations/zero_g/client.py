@@ -1,7 +1,10 @@
 """0G storage client — persists DecisionRecord JSON to 0G decentralized storage.
 
-Uses 0g-storage-sdk (pip install 0g-storage-sdk) or falls back to direct HTTP
-if the SDK is unavailable. Galileo testnet by default.
+Upload priority:
+  1. Official 0G TypeScript SDK via Node.js helper (contracts/storage_upload/upload.mjs)
+  2. HTTP indexer fallback (simulated tx_hash when node unavailable)
+
+Galileo testnet by default (chain ID 80087).
 """
 
 from __future__ import annotations
@@ -9,7 +12,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import subprocess
+import tempfile
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 from pydantic import BaseModel
@@ -51,16 +58,18 @@ class ZeroGClient:
         self._sdk_available = self._check_sdk()
 
     def _check_sdk(self) -> bool:
-        try:
-            import importlib
-            importlib.import_module("zg")
-            return True
-        except ImportError:
-            logger.warning(
-                "0g-storage-sdk not installed; falling back to HTTP upload. "
-                "Install: pip install 0g-storage-sdk"
-            )
-            return False
+        """Check if the Node.js 0G TS SDK helper is available."""
+        helper = Path(__file__).parent.parent.parent.parent / "contracts" / "storage_upload" / "upload.mjs"
+        if helper.exists() and self.private_key:
+            try:
+                result = subprocess.run(["node", "--version"], capture_output=True, timeout=5)
+                if result.returncode == 0:
+                    logger.info("0G TS SDK helper available at %s", helper)
+                    return True
+            except Exception:
+                pass
+        logger.warning("0G TS SDK helper unavailable — using HTTP fallback")
+        return False
 
     def _record_to_bytes(self, record: DecisionRecord) -> bytes:
         """Serialize a DecisionRecord to canonical JSON bytes for 0G upload."""
@@ -96,37 +105,41 @@ class ZeroGClient:
         return result
 
     async def _upload_via_sdk(self, data: bytes, root_hash: str) -> StorageResult:
-        """Upload using 0g-storage-sdk."""
+        """Upload using the official 0G TypeScript SDK via Node.js subprocess."""
+        helper = Path(__file__).parent.parent.parent.parent / "contracts" / "storage_upload" / "upload.mjs"
         try:
-            import zg  # type: ignore[import]
-            from web3 import Web3
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="wb") as tmp:
+                tmp.write(data)
+                tmp_path = tmp.name
 
-            w3 = Web3(Web3.HTTPProvider(self.evm_rpc))
-            if self.private_key:
-                account = w3.eth.account.from_key(self.private_key)
-                uploader = zg.ZgFile(data)
-                tree = uploader.build_merkle_tree()
-                tx = await zg.upload(
-                    tree=tree,
-                    indexer_url=self.indexer_url,
-                    account=account,
-                    w3=w3,
-                )
-                tx_hash = tx.get("tx_hash", root_hash)
-            else:
-                # No key: simulate upload (demo mode)
-                logger.warning("No 0G private key — using demo mode (no real upload)")
-                tx_hash = f"demo-{root_hash[:20]}"
-
-            return StorageResult(
-                tx_hash=tx_hash,
-                root_hash=root_hash,
-                size_bytes=len(data),
-                stored_at=datetime.now(UTC),
-                explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
+            result = subprocess.run(
+                ["node", str(helper), tmp_path, self.private_key],
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
-        except Exception as e:
-            logger.warning("SDK upload failed, falling back to HTTP: %s", e)
+            os.unlink(tmp_path)
+
+            if result.returncode == 0:
+                output = json.loads(result.stdout.strip())
+                if "error" in output:
+                    raise RuntimeError(output["error"])
+                tx_hash = output.get("tx_hash", root_hash)
+                real_root = output.get("root_hash", root_hash)
+                explorer_url = output.get("explorer_url", f"{ZERO_G_EXPLORER}/tx/{tx_hash}")
+                logger.info("0G TS SDK upload success: root=%s tx=%s", real_root, tx_hash)
+                return StorageResult(
+                    tx_hash=tx_hash,
+                    root_hash=real_root,
+                    size_bytes=len(data),
+                    stored_at=datetime.now(UTC),
+                    explorer_url=explorer_url,
+                )
+            else:
+                raise RuntimeError(result.stderr or result.stdout)
+
+        except Exception as exc:
+            logger.warning("0G TS SDK upload failed, falling back to HTTP: %s", exc)
             return await self._upload_via_http(data, root_hash)
 
     async def _upload_via_http(self, data: bytes, root_hash: str) -> StorageResult:
