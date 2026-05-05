@@ -2,7 +2,8 @@
 
 **0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
 
-> **0G Mainnet Contract:** `DEPLOYMENT_ADDRESSES.md` ← filled after deploy  
+> **0G Mainnet Contract:** [`0x01fE5698a2448d0fc336295df9977796030C79C4`](https://chainscan.0g.ai/address/0x01fE5698a2448d0fc336295df9977796030C79C4)  
+> **iNFT Demo Tx:** [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) — Token ID 1  
 > **Explorer:** https://chainscan.0g.ai
 
 A 2-agent AI system that helps XRP holders enter Flare DeFi end-to-end — with every decision verified on-chain and stored as an iNFT on 0G.

@@ -48,6 +48,9 @@ class Settings(BaseSettings):
         description="0G block explorer base URL",
     )
     zero_g_private_key: str | None = Field(default=None, description="0G deployer key")
+    zero_g_inft_contract: str | None = Field(
+        default=None, description="Deployed XRPFiINFT contract address on 0G"
+    )
 
     # Uniswap
     uniswap_api_url: str = Field(

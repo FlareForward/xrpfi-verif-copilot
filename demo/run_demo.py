@@ -42,7 +42,7 @@ log = structlog.get_logger(__name__)
 # Fixture: 100 XRP → FXRP demo
 DEMO_XRP_AMOUNT = 100.0
 DEMO_XRP_ADDRESS = "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59"  # example XRPL address
-DEMO_RECIPIENT = "0x1234567890123456789012345678901234567890"  # demo recipient
+DEMO_RECIPIENT = "0x81e51856d72023490cF7DEc1A6717f4269028F95"  # operator wallet
 
 
 async def step_fetch_ftso_prices() -> list[FtsoPrice]:
@@ -242,11 +242,11 @@ async def step_persist_to_zero_g(records: list[DecisionRecord]) -> list[str]:
 async def step_mint_inft(
     records: list[DecisionRecord], storage_uri: str
 ) -> str:
-    """Step 7: Mint iNFT on 0G Galileo testnet."""
-    log.info("step", n=7, action="Minting iNFT on 0G Galileo testnet")
+    """Step 7: Mint iNFT on 0G mainnet."""
+    log.info("step", n=7, action="Minting iNFT on 0G mainnet")
     settings = get_settings()
     minter = INFTMinter(
-        contract_address=None,
+        contract_address=settings.zero_g_inft_contract,
         rpc_url=settings.zero_g_rpc_url,
         private_key=settings.zero_g_private_key,
     )
@@ -275,7 +275,7 @@ async def main() -> None:
 
     print("\n" + "=" * 70)
     print("  XRPFi Verifiable Copilot — End-to-End Demo")
-    print("  ETHGlobal Open Agents 2026 | by FlareForward")
+    print("  0G APAC Hackathon 2026 | by FlareForward")
     print("=" * 70 + "\n")
 
     records: list[DecisionRecord] = []
