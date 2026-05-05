@@ -1,7 +1,7 @@
 """0G storage client — persists DecisionRecord JSON to 0G decentralized storage.
 
 Uses 0g-storage-sdk (pip install 0g-storage-sdk) or falls back to direct HTTP
-if the SDK is unavailable. Newton testnet by default.
+if the SDK is unavailable. Galileo testnet by default.
 """
 
 from __future__ import annotations
@@ -9,8 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import httpx
 from pydantic import BaseModel
@@ -19,11 +18,11 @@ from src.contracts.decision_log import DecisionRecord
 
 logger = logging.getLogger(__name__)
 
-# 0G Newton testnet
+# 0G Galileo testnet (V3 — current active testnet as of 2026)
 ZERO_G_EVM_RPC = "https://evmrpc-testnet.0g.ai"
 ZERO_G_INDEXER_URL = "https://indexer-storage-testnet-turbo.0g.ai"
-ZERO_G_CHAIN_ID = 16600
-ZERO_G_EXPLORER = "https://chainscan-newton.0g.ai"
+ZERO_G_CHAIN_ID = 80087
+ZERO_G_EXPLORER = "https://chainscan-galileo.0g.ai"
 
 
 class StorageResult(BaseModel):
@@ -44,7 +43,7 @@ class ZeroGClient:
         self,
         evm_rpc: str = ZERO_G_EVM_RPC,
         indexer_url: str = ZERO_G_INDEXER_URL,
-        private_key: Optional[str] = None,
+        private_key: str | None = None,
     ) -> None:
         self.evm_rpc = evm_rpc
         self.indexer_url = indexer_url
@@ -123,7 +122,7 @@ class ZeroGClient:
                 tx_hash=tx_hash,
                 root_hash=root_hash,
                 size_bytes=len(data),
-                stored_at=datetime.now(timezone.utc),
+                stored_at=datetime.now(UTC),
                 explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
             )
         except Exception as e:
@@ -157,6 +156,6 @@ class ZeroGClient:
             tx_hash=tx_hash,
             root_hash=root_hash,
             size_bytes=len(data),
-            stored_at=datetime.now(timezone.utc),
+            stored_at=datetime.now(UTC),
             explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
         )

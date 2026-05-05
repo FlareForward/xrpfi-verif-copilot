@@ -1,4 +1,4 @@
-"""0G iNFT minter — mints ERC-7857 AI agent NFTs on 0G Newton testnet.
+"""0G iNFT minter — mints ERC-7857 AI agent NFTs on 0G Galileo testnet.
 
 iNFT (intelligent NFT) is ERC-7857 on 0G. Each DecisionRecord history
 is minted as an iNFT, giving the judge a clickable proof on 0G explorer.
@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-import httpx
 from pydantic import BaseModel
 from web3 import Web3
 from web3.contract import Contract
@@ -21,8 +19,8 @@ from src.contracts.decision_log import DecisionRecord
 logger = logging.getLogger(__name__)
 
 ZERO_G_EVM_RPC = "https://evmrpc-testnet.0g.ai"
-ZERO_G_EXPLORER = "https://chainscan-newton.0g.ai"
-ZERO_G_CHAIN_ID = 16600
+ZERO_G_EXPLORER = "https://chainscan-galileo.0g.ai"
+ZERO_G_CHAIN_ID = 80087
 
 # ERC-7857 iNFT ABI — minimal interface for mint + tokenURI
 INFT_ABI = [
@@ -66,7 +64,7 @@ class MintResult(BaseModel):
 
 
 class INFTMinter:
-    """Mints DecisionRecord audit logs as iNFTs on 0G Newton testnet.
+    """Mints DecisionRecord audit logs as iNFTs on 0G Galileo testnet.
 
     The iNFT encryptedURI points to the 0G storage tx_hash where the full
     DecisionRecord JSON is stored. The metadataHash is keccak256 of the JSON.
@@ -74,15 +72,15 @@ class INFTMinter:
 
     def __init__(
         self,
-        contract_address: Optional[str] = None,
+        contract_address: str | None = None,
         rpc_url: str = ZERO_G_EVM_RPC,
-        private_key: Optional[str] = None,
+        private_key: str | None = None,
     ) -> None:
         self.rpc_url = rpc_url
         self.private_key = private_key
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
         self.contract_address = contract_address
-        self._contract: Optional[Contract] = None
+        self._contract: Contract | None = None
 
         if contract_address:
             checksum = self.w3.to_checksum_address(contract_address)
@@ -194,7 +192,7 @@ class INFTMinter:
             token_id=token_id,
             tx_hash=tx_hash_hex,
             explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash_hex}",
-            minted_at=datetime.now(timezone.utc),
+            minted_at=datetime.now(UTC),
             metadata_hash="0x" + metadata_hash.hex(),
         )
 
@@ -207,6 +205,6 @@ class INFTMinter:
             token_id=demo_token_id,
             tx_hash=demo_tx,
             explorer_url=f"{ZERO_G_EXPLORER}/tx/{demo_tx}",
-            minted_at=datetime.now(timezone.utc),
+            minted_at=datetime.now(UTC),
             metadata_hash="0x" + metadata_hash.hex(),
         )

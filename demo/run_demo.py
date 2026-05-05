@@ -10,7 +10,7 @@ Walks through the full flow:
   6. yield-router.eth receives message, recommends yield allocation
   7. Uniswap API called for swap leg
   8. All decisions persisted to 0G storage
-  9. iNFT minted on 0G Newton testnet
+  9. iNFT minted on 0G Galileo testnet
   10. Explorer URL printed
 
 Run:
@@ -237,8 +237,8 @@ async def step_persist_to_zero_g(records: list[DecisionRecord]) -> list[str]:
 async def step_mint_inft(
     records: list[DecisionRecord], storage_uri: str
 ) -> str:
-    """Step 7: Mint iNFT on 0G Newton testnet."""
-    log.info("step", n=7, action="Minting iNFT on 0G Newton testnet")
+    """Step 7: Mint iNFT on 0G Galileo testnet."""
+    log.info("step", n=7, action="Minting iNFT on 0G Galileo testnet")
     settings = get_settings()
     minter = INFTMinter(
         contract_address=None,
