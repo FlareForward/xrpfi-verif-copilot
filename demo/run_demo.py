@@ -231,6 +231,7 @@ async def step_persist_to_zero_g(records: list[DecisionRecord]) -> list[str]:
     client = ZeroGClient(
         evm_rpc=settings.zero_g_rpc_url,
         indexer_url=settings.zero_g_storage_url,
+        flow_contract=settings.zero_g_flow_contract,
         private_key=settings.zero_g_private_key,
     )
     tx_hashes = []
