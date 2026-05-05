@@ -90,9 +90,11 @@ class TestZeroGClient:
         """Pin: upload must not raise even if 0G endpoint is unreachable."""
         record = make_record()
         self.client._sdk_available = False
-        # No mock — will hit network, which will fail, and should use simulated hash
+        # No mock — will hit network, which may fail, and should use an explicit local proof.
         result = await self.client.upload_record(record)
-        assert result.tx_hash.startswith("simulated-") or result.tx_hash.startswith("0x")
+        assert result.tx_hash.startswith("local://sha256/") or result.tx_hash.startswith("0x")
+        assert result.tx_hash.startswith("simulated-") is False
+        assert result.live is result.tx_hash.startswith("0x")
         assert record.is_persisted()
 
 

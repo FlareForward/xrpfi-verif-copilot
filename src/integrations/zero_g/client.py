@@ -2,7 +2,7 @@
 
 Upload priority:
   1. Official 0G TypeScript SDK via Node.js helper (contracts/storage_upload/upload.mjs)
-  2. HTTP indexer fallback (simulated tx_hash when node unavailable)
+  2. HTTP indexer health check + explicit local proof when live storage is unavailable
 
 Network defaults read from environment variables (mainnet by default).
 """
@@ -26,10 +26,8 @@ from src.contracts.decision_log import DecisionRecord
 logger = logging.getLogger(__name__)
 
 # 0G mainnet defaults — override via env vars
-ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://evmrpc-mainnet.0g.ai")
-ZERO_G_INDEXER_URL = os.environ.get(
-    "ZERO_G_STORAGE_URL", "https://indexer-storage-testnet-standard.0g.ai"
-)
+ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://0g-rpc.publicnode.com")
+ZERO_G_INDEXER_URL = os.environ.get("ZERO_G_STORAGE_URL", "https://indexer-storage-turbo.0g.ai")
 ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
 ZERO_G_EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
 
@@ -40,12 +38,15 @@ class StorageResult(BaseModel):
     size_bytes: int
     stored_at: datetime
     explorer_url: str
+    backend: str = "unknown"
+    live: bool = False
+    error: str | None = None
 
 
 class ZeroGClient:
     """Persists DecisionRecord instances to 0G decentralized storage.
 
-    Falls back to HTTP upload if 0g-storage-sdk is not installed.
+    Returns an explicit non-live local proof if 0G storage is unavailable.
     """
 
     def __init__(
@@ -73,7 +74,7 @@ class ZeroGClient:
                     return True
             except Exception:
                 pass
-        logger.warning("0G TS SDK helper unavailable — using HTTP fallback")
+        logger.warning("0G TS SDK helper unavailable — checking HTTP indexer only")
         return False
 
     def _record_to_bytes(self, record: DecisionRecord) -> bytes:
@@ -115,6 +116,7 @@ class ZeroGClient:
             Path(__file__).parent.parent.parent.parent
             / "contracts" / "storage_upload" / "upload.mjs"
         )
+        tmp_path: str | None = None
         try:
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="wb") as tmp:
                 tmp.write(data)
@@ -126,10 +128,8 @@ class ZeroGClient:
                 text=True,
                 timeout=120,
             )
-            os.unlink(tmp_path)
-
             if result.returncode == 0:
-                output = json.loads(result.stdout.strip())
+                output = self._parse_helper_output(result.stdout)
                 if "error" in output:
                     raise RuntimeError(output["error"])
                 tx_hash = output.get("tx_hash", root_hash)
@@ -142,19 +142,35 @@ class ZeroGClient:
                     size_bytes=len(data),
                     stored_at=datetime.now(UTC),
                     explorer_url=explorer_url,
+                    backend="0g-ts-sdk",
+                    live=True,
                 )
             else:
                 raise RuntimeError(result.stderr or result.stdout)
 
         except Exception as exc:
-            logger.warning("0G TS SDK upload failed, falling back to HTTP: %s", exc)
+            logger.warning("0G TS SDK upload failed, checking HTTP indexer: %s", exc)
             return await self._upload_via_http(data, root_hash)
+        finally:
+            if tmp_path:
+                Path(tmp_path).unlink(missing_ok=True)
+
+    def _parse_helper_output(self, stdout: str) -> dict[str, object]:
+        """Parse the helper's JSON even when the SDK prints progress lines first."""
+        for line in reversed([item.strip() for item in stdout.splitlines() if item.strip()]):
+            try:
+                parsed = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                return parsed
+        raise RuntimeError(f"0G helper did not emit JSON: {stdout[-500:]}")
 
     async def _upload_via_http(self, data: bytes, root_hash: str) -> StorageResult:
-        """Upload via 0G HTTP indexer API (fallback)."""
+        """Upload via 0G HTTP indexer API or return an explicit local proof."""
+        error: str | None = None
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                # 0G indexer upload endpoint
                 resp = await client.post(
                     f"{self.indexer_url}/upload",
                     content=data,
@@ -164,19 +180,30 @@ class ZeroGClient:
                     body = resp.json()
                     tx_hash = body.get("tx_hash", root_hash)
                     logger.info("0G HTTP upload success: %s", tx_hash)
-                else:
-                    logger.warning(
-                        "0G HTTP upload returned %d — using simulated tx_hash", resp.status_code
+                    return StorageResult(
+                        tx_hash=tx_hash,
+                        root_hash=root_hash,
+                        size_bytes=len(data),
+                        stored_at=datetime.now(UTC),
+                        explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
+                        backend="0g-indexer-http",
+                        live=True,
                     )
-                    tx_hash = f"simulated-{root_hash[:20]}"
+                else:
+                    error = f"HTTP {resp.status_code}: {resp.text[:160]}"
+                    logger.warning("0G HTTP upload unavailable: %s", error)
             except httpx.RequestError as e:
-                logger.warning("0G HTTP upload failed: %s — using simulated tx_hash", e)
-                tx_hash = f"simulated-{root_hash[:20]}"
+                error = str(e)
+                logger.warning("0G HTTP upload failed: %s", e)
 
+        tx_hash = f"local://sha256/{root_hash.removeprefix('0x')}"
         return StorageResult(
             tx_hash=tx_hash,
             root_hash=root_hash,
             size_bytes=len(data),
             stored_at=datetime.now(UTC),
-            explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
+            explorer_url="",
+            backend="local-proof",
+            live=False,
+            error=error or "0G storage endpoint unavailable",
         )

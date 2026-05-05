@@ -8,8 +8,9 @@ exactly so that production code can swap in the real SDK with zero changes.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
 
 from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice
 
@@ -89,6 +90,74 @@ When uncertain, surface the uncertainty rather than guessing.
 
 
 # ---------------------------------------------------------------------------
+# Live reasoning helper
+# ---------------------------------------------------------------------------
+class _GeminiModels(Protocol):
+    def generate_content(self, *, model: str, contents: str) -> object: ...
+
+
+class _GeminiClient(Protocol):
+    models: _GeminiModels
+
+
+async def _generate_live_reasoning(
+    decision_context: str,
+    fallback_reasoning: str,
+) -> str:
+    """Use Gemini for DecisionRecord reasoning when configured, otherwise fallback."""
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        try:
+            from src.config import get_settings
+
+            api_key = get_settings().google_api_key
+        except Exception:
+            api_key = ""
+
+    if not api_key:
+        return fallback_reasoning
+
+    try:
+        from src.config import get_settings
+
+        model = os.getenv("GEMINI_MODEL", get_settings().gemini_model)
+        from google import genai  # type: ignore[import-not-found]
+
+        client = genai.Client(api_key=api_key)
+        prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            "Write one concise DecisionRecord reasoning paragraph for this tool result. "
+            "Do not include secrets, credentials, markdown, or transaction-signing instructions. "
+            "Keep deterministic facts intact and preserve all stated safety constraints.\n\n"
+            f"Context:\n{decision_context}\n\n"
+            f"Offline fallback reasoning:\n{fallback_reasoning}"
+        )
+        response = await _call_gemini_generate_content(client, model, prompt)
+        text = getattr(response, "text", "") or ""
+        if text.strip():
+            return text.strip()
+    except Exception as exc:
+        logger.warning("Gemini reasoning unavailable; using deterministic fallback: %s", exc)
+
+    return fallback_reasoning
+
+
+async def _call_gemini_generate_content(
+    client: _GeminiClient,
+    model: str,
+    prompt: str,
+) -> object:
+    """Bridge google-genai's sync API into async agent tools."""
+    import asyncio
+
+    return await asyncio.to_thread(
+        client.models.generate_content,
+        model=model,
+        contents=prompt,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool functions
 # ---------------------------------------------------------------------------
 def _make_record(
@@ -127,14 +196,22 @@ async def check_xrp_balance(xrp_address: str) -> dict[str, Any]:
     # In production: call XRPL public API (xrplcluster.com / xrpl.ws)
     # For hackathon: return a stub that exercises the DecisionRecord path.
     simulated_balance = 100.0  # placeholder — real impl calls xrpl-py AccountInfo
+    fallback_reasoning = (
+        "Retrieved account balance from XRPL ledger. "
+        "Minimum 20 XRP reserve must be maintained."
+    )
+    reasoning = await _generate_live_reasoning(
+        decision_context=(
+            f"Tool=check_xrp_balance; address={xrp_address}; "
+            f"balance_xrp={simulated_balance}; reserve_xrp=20"
+        ),
+        fallback_reasoning=fallback_reasoning,
+    )
 
     record = _make_record(
         action_type="report",
         input_summary=f"XRP balance check for {xrp_address}",
-        reasoning=(
-            "Retrieved account balance from XRPL ledger. "
-            "Minimum 20 XRP reserve must be maintained."
-        ),
+        reasoning=reasoning,
         action_taken=f"AccountInfo lookup for {xrp_address}",
         result_summary=f"Balance: {simulated_balance} XRP",
     )
@@ -162,15 +239,24 @@ async def get_ftso_price(feed_name: str) -> dict[str, Any]:
 
     client = FtsoClient()
     price = await client.get_price(feed_name)
+    fallback_reasoning = (
+        f"Retrieved {feed_name} price from Flare FTSO v2. "
+        f"feed_id={price.feed_id}, timestamp={price.timestamp.isoformat()}. "
+        "Used to calculate minting cost and collateral requirement."
+    )
+    reasoning = await _generate_live_reasoning(
+        decision_context=(
+            f"Tool=get_ftso_price; feed_name={feed_name}; price_usd={price.price_usd}; "
+            f"feed_id={price.feed_id}; timestamp={price.timestamp.isoformat()}; "
+            f"decimals={price.decimals}"
+        ),
+        fallback_reasoning=fallback_reasoning,
+    )
 
     record = _make_record(
         action_type="report",
         input_summary=f"FTSO price fetch for {feed_name}",
-        reasoning=(
-            f"Retrieved {feed_name} price from Flare FTSO v2. "
-            f"feed_id={price.feed_id}, timestamp={price.timestamp.isoformat()}. "
-            "Used to calculate minting cost and collateral requirement."
-        ),
+        reasoning=reasoning,
         action_taken=f"FtsoClient.get_price({feed_name!r})",
         result_summary=f"{feed_name} = ${price.price_usd:.6f} USD at {price.timestamp.isoformat()}",
         ftso_prices=[price],
@@ -209,6 +295,18 @@ async def verify_payment_fdc(
         xrp_tx_hash, from_address, to_address, amount_xrp
     )
     verified = await client.verify_payment(proof)
+    fallback_reasoning = (
+        "FDC Merkle proof requested and verified on-chain. "
+        "Minting may only proceed after verification == True."
+    )
+    reasoning = await _generate_live_reasoning(
+        decision_context=(
+            f"Tool=verify_payment_fdc; tx_prefix={xrp_tx_hash[:16]}; "
+            f"from={from_address}; to={to_address}; amount_xrp={amount_xrp}; "
+            f"verified={verified}; proof_hash_prefix={proof.proof_hash[:16]}"
+        ),
+        fallback_reasoning=fallback_reasoning,
+    )
 
     record = _make_record(
         action_type="attest",
@@ -216,10 +314,7 @@ async def verify_payment_fdc(
             f"FDC payment verification for tx={xrp_tx_hash[:16]}… "
             f"from={from_address} to={to_address} amount={amount_xrp} XRP"
         ),
-        reasoning=(
-            "FDC Merkle proof requested and verified on-chain. "
-            "Minting may only proceed after verification == True."
-        ),
+        reasoning=reasoning,
         action_taken="FdcClient.request_payment_attestation + verify_payment",
         result_summary=f"verified={verified}, proof_hash={proof.proof_hash[:16]}…",
         fdc_proof=proof,
@@ -246,15 +341,26 @@ async def estimate_mint_cost(asset_symbol: str, lots: int) -> dict[str, Any]:
 
     client = FAssetsClient()
     estimate = await client.estimate_mint_cost(asset_symbol, lots)
+    fallback_reasoning = (
+        f"Retrieved fee estimate from FAssets AssetManager. "
+        f"Minting fee (BIPS): {estimate.get('fee_bips', 'N/A')}. "
+        "User should confirm total cost before initiating."
+    )
+    reasoning = await _generate_live_reasoning(
+        decision_context=(
+            f"Tool=estimate_mint_cost; asset_symbol={asset_symbol}; lots={lots}; "
+            f"fee_bips={estimate.get('fee_bips', 'N/A')}; "
+            f"estimated_fee_xrp={estimate.get('estimated_fee_xrp', 'N/A')}; "
+            f"collateral_required_flr={estimate.get('collateral_required_flr', 'N/A')}; "
+            f"asset_manager_address={estimate.get('asset_manager_address', 'N/A')}"
+        ),
+        fallback_reasoning=fallback_reasoning,
+    )
 
     record = _make_record(
         action_type="report",
         input_summary=f"Minting cost estimate for {lots} lots of {asset_symbol}",
-        reasoning=(
-            f"Retrieved fee estimate from FAssets AssetManager. "
-            f"Minting fee (BIPS): {estimate.get('fee_bips', 'N/A')}. "
-            "User should confirm total cost before initiating."
-        ),
+        reasoning=reasoning,
         action_taken=f"FAssetsClient.estimate_mint_cost({asset_symbol!r}, {lots})",
         result_summary=str(estimate),
     )
@@ -296,6 +402,20 @@ async def initiate_mint(
 
     client = FAssetsClient()
     result = await client.initiate_mint(agent_address, lots, max_minting_fee_bips)
+    fallback_reasoning = (
+        "Collateral reservation submitted. Per 2-of-2 confirmation rule, "
+        "this agent has advised only. User must approve the reservation "
+        "on-chain before minting is finalized."
+    )
+    reasoning = await _generate_live_reasoning(
+        decision_context=(
+            f"Tool=initiate_mint; agent_address={agent_address}; lots={lots}; "
+            f"max_minting_fee_bips={max_minting_fee_bips}; "
+            f"collateral_reservation_id={result.get('collateral_reservation_id', 'N/A')}; "
+            f"status={result.get('status', 'pending_user_approval')}"
+        ),
+        fallback_reasoning=fallback_reasoning,
+    )
 
     record = _make_record(
         action_type="mint",
@@ -303,11 +423,7 @@ async def initiate_mint(
             f"Initiate mint: agent={agent_address}, lots={lots}, "
             f"max_fee_bips={max_minting_fee_bips}"
         ),
-        reasoning=(
-            "Collateral reservation submitted. Per 2-of-2 confirmation rule, "
-            "this agent has advised only. User must approve the reservation "
-            "on-chain before minting is finalized."
-        ),
+        reasoning=reasoning,
         action_taken=(
             f"FAssetsClient.initiate_mint({agent_address!r}, {lots}, {max_minting_fee_bips})"
         ),

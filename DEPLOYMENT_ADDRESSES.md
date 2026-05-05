@@ -44,9 +44,24 @@
 
 **Explorer:** https://songbird-explorer.flare.network/
 
-## ENS (Ethereum Mainnet)
+## ENS
 
 | Name | Status |
 |------|--------|
-| `mint-helper.eth` | Fallback to test address when unregistered (see `resolver.py`) |
-| `yield-router.eth` | Fallback to test address when unregistered (see `resolver_b.py`) |
+| `mint-helper.eth` | Live ENS resolution first; explicit fallback only while name is unregistered (see `resolver.py`) |
+| `yield-router.eth` | Live ENS resolution first; explicit fallback only while name is unregistered (see `resolver_b.py`) |
+
+**Registration target:** Sepolia for hackathon identity testing, mainnet before production.
+
+**Resolver note:** The in-tree resolver now uses Ethereum Keccak namehash and no longer short-circuits web3 resolution into fallback mode.
+
+## 0G Storage
+
+| Network | Value |
+|---------|-------|
+| Chain ID | `16661` |
+| RPC | `https://0g-rpc.publicnode.com` |
+| Storage indexer | `https://indexer-storage-turbo.0g.ai` |
+| Flow contract | `0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526` |
+
+The old Galileo/testnet Flow contract `0x22E03a6A89B950F1c82ec5e74F8eCa321a105296` is not used for mainnet uploads.

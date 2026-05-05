@@ -23,8 +23,7 @@ ENS_NAME = "yield-router.eth"
 FALLBACK_ADDRESS = "0x0000000000000000000000000000000000000002"
 
 # ENS NameHash of "yield-router.eth" (computed per EIP-137)
-# Python: eth_ens_namehash.main.ENS.namehash("yield-router.eth")
-ENS_NAMEHASH = "0x0000000000000000000000000000000000000000000000000000000000000000"  # placeholder
+ENS_NAMEHASH = "0xecf8f9f11f7a09467dc9a539668025c21047e4045a053ff92a183992a2aad853"
 
 # Uniswap prize context: ENS registration for yield-router.eth demonstrates
 # on-chain identity for autonomous DeFi agents — a key primitive for agent accountability.
@@ -69,9 +68,11 @@ class YieldRouterEnsResolver:
             return self._resolved_address
 
         try:
-            address = await self._resolve_via_web3()
+            from src.integrations.ens.resolver import TEST_ADDRESSES, EnsResolver
+
+            address = await EnsResolver(rpc_url=self._rpc_url).resolve(ENS_NAME)
             self._resolved_address = address
-            self._fallback_mode = False
+            self._fallback_mode = address in {FALLBACK_ADDRESS, TEST_ADDRESSES[ENS_NAME]}
             logger.info("ENS resolved %s -> %s", ENS_NAME, address)
             return address
         except Exception as exc:

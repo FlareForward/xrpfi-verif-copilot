@@ -21,11 +21,13 @@ Requires: .env file with GOOGLE_API_KEY and optionally ZERO_G_PRIVATE_KEY.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -264,8 +266,8 @@ async def step_mint_inft(
     return result.explorer_url
 
 
-async def main() -> None:
-    """Run the full XRPFi Verifiable Copilot demo."""
+def configure_logging() -> None:
+    """Configure demo logging once for terminal and browser runs."""
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="ISO"),
@@ -273,11 +275,9 @@ async def main() -> None:
         ]
     )
 
-    print("\n" + "=" * 70)
-    print("  XRPFi Verifiable Copilot — End-to-End Demo")
-    print("  0G APAC Hackathon 2026 | by FlareForward")
-    print("=" * 70 + "\n")
 
+async def run_demo_flow() -> dict[str, Any]:
+    """Run the demo flow and return a browser-friendly result payload."""
     records: list[DecisionRecord] = []
 
     # 1. Fetch FTSO prices
@@ -312,19 +312,84 @@ async def main() -> None:
     # 7. Mint iNFT
     inft_url = await step_mint_inft(records, storage_uri=primary_uri)
 
+    return {
+        "agents": [
+            {"ens": "mint-helper.eth", "address": mint_helper_addr},
+            {"ens": "yield-router.eth", "address": yield_router_addr},
+        ],
+        "prices": [price.model_dump(mode="json") for price in ftso_prices],
+        "xrp_amount": DEMO_XRP_AMOUNT,
+        "fxrp_minted": fxrp_minted,
+        "decisions": [record.model_dump(mode="json") for record in records],
+        "storage_hashes": tx_hashes,
+        "inft_url": inft_url,
+    }
+
+
+def print_banner() -> None:
+    """Print the terminal demo banner."""
+    print("\n" + "=" * 70)
+    print("  XRPFi Verifiable Copilot — End-to-End Demo")
+    print("  0G APAC Hackathon 2026 | by FlareForward")
+    print("=" * 70 + "\n")
+
+
+def print_summary(result: dict[str, Any]) -> None:
+    """Print the terminal demo summary."""
+    agents = result["agents"]
+    ftso_prices = result["prices"]
+    tx_hashes = result["storage_hashes"]
+    inft_url = result["inft_url"]
     print("\n" + "=" * 70)
     print("  Demo Complete")
     print("=" * 70)
-    print(f"  Agents:        mint-helper.eth → {mint_helper_addr[:18]}...")
-    print(f"                 yield-router.eth → {yield_router_addr[:18]}...")
-    xrp_price = ftso_prices[1].price_usd if len(ftso_prices) > 1 else "n/a"
-    print(f"  FTSO prices:   FLR/USD={ftso_prices[0].price_usd}, XRP/USD={xrp_price}")
-    print(f"  XRP minted:    {DEMO_XRP_AMOUNT} XRP → {fxrp_minted:.2f} FXRP")
-    print(f"  Decisions:     {len(records)} records persisted to 0G")
+    print(f"  Agents:        mint-helper.eth → {agents[0]['address'][:18]}...")
+    print(f"                 yield-router.eth → {agents[1]['address'][:18]}...")
+    xrp_price = ftso_prices[1]["price_usd"] if len(ftso_prices) > 1 else "n/a"
+    print(f"  FTSO prices:   FLR/USD={ftso_prices[0]['price_usd']}, XRP/USD={xrp_price}")
+    print(f"  XRP minted:    {result['xrp_amount']} XRP → {result['fxrp_minted']:.2f} FXRP")
+    print(f"  Decisions:     {len(result['decisions'])} records persisted to 0G")
     print(f"  0G storage:    {tx_hashes[0][:40] if tx_hashes else 'demo'}...")
     print(f"  iNFT:          {inft_url}")
     print(f"\n  ✅ Verifiable audit trail: {inft_url}\n")
 
 
+async def main() -> None:
+    """Run the full XRPFi Verifiable Copilot demo."""
+    configure_logging()
+    print_banner()
+    result = await run_demo_flow()
+    print_summary(result)
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse demo launch options."""
+    parser = argparse.ArgumentParser(description="Run the XRPFi demo.")
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Launch the browser UI instead of the terminal demo.",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host for --serve mode. Defaults to 127.0.0.1.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8088,
+        help="Port for --serve mode. Defaults to 8088.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = parse_args()
+    if args.serve:
+        from web.server import serve
+
+        configure_logging()
+        serve(run_demo_flow, host=args.host, port=args.port)
+    else:
+        asyncio.run(main())

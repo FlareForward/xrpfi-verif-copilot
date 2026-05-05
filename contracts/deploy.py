@@ -39,13 +39,13 @@ if not PRIVATE_KEY:
 # Compile + deploy
 # ---------------------------------------------------------------------------
 try:
-    from web3 import Web3
     from solcx import compile_source, install_solc
+    from web3 import Web3
 except ImportError:
     print("Installing required packages...")
     os.system(f"{sys.executable} -m pip install web3 py-solc-x -q")
-    from web3 import Web3
     from solcx import compile_source, install_solc
+    from web3 import Web3
 
 RPC_URL = os.environ.get("ZERO_G_RPC_URL", "https://evmrpc-mainnet.0g.ai")
 CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))

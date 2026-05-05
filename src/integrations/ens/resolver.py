@@ -14,6 +14,7 @@ short-circuit to a constant).
 
 from __future__ import annotations
 
+import inspect
 import logging
 
 import httpx
@@ -88,15 +89,14 @@ class EnsResolver:
 
         Implements EIP-137: namehash(name) = keccak256(namehash(parent) + keccak256(label))
         """
-        import hashlib
-
+        from web3 import Web3
         node = b"\x00" * 32
         if not name:
             return node
         labels = name.split(".")
         for label in reversed(labels):
-            label_hash = hashlib.new("sha3_256", label.encode()).digest()
-            node = hashlib.new("sha3_256", node + label_hash).digest()
+            label_hash = Web3.keccak(text=label)
+            node = Web3.keccak(node + label_hash)
         return node
 
     def _namehash_hex(self, name: str) -> str:
@@ -130,7 +130,10 @@ class EnsResolver:
             ens = w3.ens  # type: ignore[attr-defined]
             if ens is None:
                 return None
-            address: str = await ens.address(name)  # type: ignore[assignment]
+            maybe_address = ens.address(name)
+            address: str | None = (
+                await maybe_address if inspect.isawaitable(maybe_address) else maybe_address
+            )
             return address if address and address != ZERO_ADDRESS else None
         except Exception as exc:
             logger.debug("web3 ENS resolution failed for %s: %s", name, exc)
@@ -241,7 +244,10 @@ class EnsResolver:
             try:
                 ens = w3.ens  # type: ignore[attr-defined]
                 if ens is not None:
-                    name: str = await ens.name(address)  # type: ignore[assignment]
+                    maybe_name = ens.name(address)
+                    name: str | None = (
+                        await maybe_name if inspect.isawaitable(maybe_name) else maybe_name
+                    )
                     if name:
                         logger.info("ENS reverse: %s → %s", address, name)
                         return name

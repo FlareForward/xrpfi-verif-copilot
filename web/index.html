@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XRPFi Verifiable Copilot</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar" aria-label="Demo controls">
+        <div>
+          <p class="eyebrow">0G APAC Hackathon 2026</p>
+          <h1>XRPFi Verifiable Copilot</h1>
+        </div>
+        <button id="run-demo" type="button">
+          <span class="button-icon" aria-hidden="true">▶</span>
+          Run demo
+        </button>
+      </section>
+
+      <section class="workspace">
+        <aside class="rail" aria-label="Demo flow">
+          <ol id="steps">
+            <li data-step="1" class="active">FTSO prices</li>
+            <li data-step="2">ENS agents</li>
+            <li data-step="3">FDC attestation</li>
+            <li data-step="4">FXRP mint</li>
+            <li data-step="5">Yield route</li>
+            <li data-step="6">0G storage</li>
+            <li data-step="7">iNFT proof</li>
+          </ol>
+        </aside>
+
+        <section class="panel" aria-live="polite">
+          <div id="empty-state" class="empty-state">
+            <h2>Ready for judge review</h2>
+            <p>
+              Launch the end-to-end XRP to FXRP to Flare DeFi flow and inspect the
+              verifiable decision trail in one place.
+            </p>
+          </div>
+
+          <div id="loading-state" class="loading-state hidden">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2>Running demo flow</h2>
+            <p>Fetching prices, resolving agents, routing yield, and minting proof.</p>
+          </div>
+
+          <div id="error-state" class="error-state hidden">
+            <h2>Demo run failed</h2>
+            <p id="error-message"></p>
+          </div>
+
+          <div id="result-state" class="result-state hidden">
+            <div class="metrics">
+              <article>
+                <span>XRP input</span>
+                <strong id="xrp-amount">-</strong>
+              </article>
+              <article>
+                <span>FXRP minted</span>
+                <strong id="fxrp-amount">-</strong>
+              </article>
+              <article>
+                <span>Decisions</span>
+                <strong id="decision-count">-</strong>
+              </article>
+            </div>
+
+            <div class="split">
+              <section>
+                <h2>Agents</h2>
+                <div id="agents" class="stack"></div>
+              </section>
+              <section>
+                <h2>FTSO Prices</h2>
+                <div id="prices" class="stack"></div>
+              </section>
+            </div>
+
+            <section>
+              <h2>Decision Trail</h2>
+              <div id="decisions" class="decision-list"></div>
+            </section>
+
+            <section class="proof-band">
+              <div>
+                <span>0G iNFT proof</span>
+                <strong id="proof-url">Pending</strong>
+              </div>
+              <a id="proof-link" href="#" target="_blank" rel="noreferrer">Open proof</a>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

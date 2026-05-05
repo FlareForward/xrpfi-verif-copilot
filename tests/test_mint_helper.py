@@ -13,6 +13,7 @@ from __future__ import annotations
 import inspect
 import re
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -61,6 +62,42 @@ class TestCheckXrpBalance:
 
         assert "balance_xrp" in result
         assert isinstance(result["balance_xrp"], (int, float))
+
+    @pytest.mark.asyncio
+    async def test_uses_live_reasoning_when_google_api_key_present(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from src.agents.mint_helper.agent import check_xrp_balance
+
+        monkeypatch.setenv("GOOGLE_API_KEY", "test-key-not-used")
+        with patch(
+            "src.agents.mint_helper.agent._generate_live_reasoning",
+            new_callable=AsyncMock,
+            return_value="Gemini reasoning: balance leaves room above XRPL reserve.",
+        ) as reasoning:
+            result = await check_xrp_balance("rGWrZyax5eXbi5YpFV3xgMm1K9L3YSm1YV")
+
+        assert result["decision_record"].reasoning.startswith("Gemini reasoning")
+        reasoning.assert_awaited_once()
+        assert "Tool=check_xrp_balance" in reasoning.await_args.kwargs["decision_context"]
+
+    @pytest.mark.asyncio
+    async def test_reasoning_helper_keeps_offline_fallback_without_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from src.agents.mint_helper.agent import _generate_live_reasoning
+
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        with patch(
+            "src.config.get_settings",
+            return_value=SimpleNamespace(google_api_key="", gemini_model="gemini-2.0-flash"),
+        ):
+            reasoning = await _generate_live_reasoning(
+                decision_context="Tool=check_xrp_balance",
+                fallback_reasoning="Deterministic offline fallback.",
+            )
+
+        assert reasoning == "Deterministic offline fallback."
 
 
 # ---------------------------------------------------------------------------

@@ -35,11 +35,11 @@ class Settings(BaseSettings):
 
     # 0G storage
     zero_g_storage_url: str = Field(
-        default="https://indexer-storage-testnet-standard.0g.ai",
+        default="https://indexer-storage-turbo.0g.ai",
         description="0G storage node endpoint",
     )
     zero_g_rpc_url: str = Field(
-        default="https://evmrpc-mainnet.0g.ai",
+        default="https://0g-rpc.publicnode.com",
         description="0G EVM RPC endpoint (mainnet default)",
     )
     zero_g_chain_id: int = Field(default=16661, description="0G chain ID (16661 = mainnet)")

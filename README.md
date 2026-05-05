@@ -75,8 +75,12 @@ cp .env.example .env
 # Fill in GOOGLE_API_KEY (required for agent reasoning)
 # Fill in ZERO_G_PRIVATE_KEY for real 0G storage (optional — demo mode works without)
 
-# 4. Run demo
+# 4. Run terminal demo
 python demo/run_demo.py
+
+# Or launch the browser demo
+python demo/run_demo.py --serve
+# Open http://127.0.0.1:8088
 
 # 5. Run tests
 python -m pytest tests/ -v
