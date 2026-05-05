@@ -5,3 +5,4 @@ date	surface	phase	start	end	status	commit	notes
 2026-05-04	ORCH	T04 merge+gate+PRA	21:00	21:15	SHIPS	55415c1	151/151 tests; ruff clean; PRA 7/7=100%; 12 phase-boundary commits
 2026-05-05	LANE-B	T05-T06 submission+feedback	15:51	15:53	PASS	95d896b	SUBMISSION one-pager; FEEDBACK 0G APAC + Why 0G; ruff clean; pushed
 2026-05-05	ORCH	T01-T02 0G storage mainnet fix	15:48	15:58	PASS	21f521e	Pinned mainnet Flow contract; .env.example mainnet defaults; ZERO_G_STORAGE_STATUS.md documents insufficient-funded-wallet blocker; 155 tests; ruff clean; judge_demo no-crash; push blocked DNS github.com; isolation: worktree
+2026-05-05	ORCH	XRPFi sponsor gates	16:17	16:37	PASS	4fdd811	ENS registration script committed but live tx deferred: Sepolia wallet 0 ETH; Lane A AXL receipt merged from 0c8c6a4; Lane B Uniswap API fallback committed 7bb5fc1; 157 tests; ruff clean; judge_demo step 7 labeled fixture and step 8 prints receipt; isolation: shared-checkout
