@@ -10,18 +10,16 @@ Covers:
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.contracts.decision_log import FtsoPrice
 from src.integrations.ftso.client import (
-    COSTON2_RPC,
     FEED_IDS,
-    FtsoClient,
     STALE_THRESHOLD_SECONDS,
+    FtsoClient,
 )
 
 
@@ -68,7 +66,7 @@ class TestFtsoClientGetPrice:
         # Pre-seed cached FTSO address to skip registry call
         client._ftso_address = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
 
-        ts = int(datetime.now(timezone.utc).timestamp())
+        ts = int(datetime.now(UTC).timestamp())
         # XRP/USD = 0.50 with 7 decimals → value = 5_000_000
         encoded = _encode_feed_result(5_000_000, 7, ts)
 
@@ -89,7 +87,7 @@ class TestFtsoClientGetPrice:
         client = FtsoClient()
         client._ftso_address = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
 
-        ts = int(datetime.now(timezone.utc).timestamp())
+        ts = int(datetime.now(UTC).timestamp())
         # FLR/USD = 0.02 with 7 decimals → value = 200_000
         encoded = _encode_feed_result(200_000, 7, ts)
 
@@ -108,7 +106,7 @@ class TestFtsoClientGetPrice:
         client._ftso_address = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
 
         # Timestamp 60 seconds ago — should be stale
-        old_ts = int(datetime.now(timezone.utc).timestamp()) - (STALE_THRESHOLD_SECONDS + 30)
+        old_ts = int(datetime.now(UTC).timestamp()) - (STALE_THRESHOLD_SECONDS + 30)
         encoded = _encode_feed_result(5_000_000, 7, old_ts)
 
         with patch.object(client, "_eth_call", new_callable=AsyncMock) as mock_call:
@@ -144,7 +142,7 @@ class TestFtsoClientGetPrice:
         client = FtsoClient()
         client._ftso_address = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
 
-        ts = int(datetime.now(timezone.utc).timestamp())
+        ts = int(datetime.now(UTC).timestamp())
         xrp_result = _encode_feed_result(5_000_000, 7, ts)
         flr_result = _encode_feed_result(200_000, 7, ts)
 
@@ -168,12 +166,11 @@ class TestFtsoClientGetPrice:
         """FLR/USD and XRP/USD feed IDs match the spec."""
         client = FtsoClient()
         feeds = client.get_known_feeds()
-        assert feeds["FLR/USD"]["feed_id"] == "0x014658522f555344000000000000000000000000000000000000000000"
-        assert feeds["XRP/USD"]["feed_id"] == "0x015852502f555344000000000000000000000000000000000000000000"
+        assert feeds["FLR/USD"]["feed_id"] == "0x01464c522f55534400000000000000000000000000"
+        assert feeds["XRP/USD"]["feed_id"] == "0x015852502f55534400000000000000000000000000"
 
     def test_ftso_price_always_has_feed_id_and_timestamp(self) -> None:
         """FtsoPrice model requires feed_id and timestamp (Flare-First Data Policy)."""
-        import inspect
         from src.contracts.decision_log import FtsoPrice as FP
 
         fields = FP.model_fields

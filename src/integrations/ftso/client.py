@@ -30,13 +30,14 @@ COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc"
 
 FLARE_CONTRACT_REGISTRY = "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
 
-# FTSO v2 feed IDs (bytes21 format from official Flare documentation)
+# FTSO v2 feed IDs — bytes21 (42 hex chars = 21 bytes)
+# Format: 0x01 + ASCII feed name + zero-pad to 21 bytes
 FEED_IDS: dict[str, str] = {
-    "FLR/USD": "0x014658522f555344000000000000000000000000000000000000000000",
-    "XRP/USD": "0x015852502f555344000000000000000000000000000000000000000000",
-    "BTC/USD": "0x014254432f555344000000000000000000000000000000000000000000",
-    "ETH/USD": "0x014554482f555344000000000000000000000000000000000000000000",
-    "SGB/USD": "0x015347422f555344000000000000000000000000000000000000000000",
+    "FLR/USD": "0x01464c522f55534400000000000000000000000000",  # FL=464c
+    "XRP/USD": "0x015852502f55534400000000000000000000000000",
+    "BTC/USD": "0x014254432f55534400000000000000000000000000",
+    "ETH/USD": "0x014554482f55534400000000000000000000000000",
+    "SGB/USD": "0x015347422f55534400000000000000000000000000",
 }
 
 # Feed decimals (standard Flare FTSO v2: all USD feeds use 7 decimals)
@@ -128,14 +129,14 @@ class FtsoClient:
         except Exception as exc:
             logger.warning("Could not resolve FtsoV2 from registry: %s", exc)
             # Known Coston2 FtsoV2 address as fallback
-            self._ftso_address = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
+            self._ftso_address = "0xc4e9c78ea53db782e28f28fdf80baf59336b304d"
 
         return self._ftso_address
 
     def _encode_feed_id_bytes21(self, feed_id_hex: str) -> str:
-        """Zero-pad a bytes21 feed_id to 32 bytes for ABI encoding."""
+        """Right-pad a bytes21 feed_id (42 hex chars) to 32 bytes (64 hex chars) for ABI."""
         clean = feed_id_hex.replace("0x", "")
-        # bytes21 = 42 hex chars; pad right to 64 hex chars
+        assert len(clean) == 42, f"Expected 42-char bytes21, got {len(clean)}: {clean!r}"
         return clean.ljust(64, "0")
 
     def _encode_get_feed_by_id(self, feed_id_hex: str) -> str:
@@ -143,9 +144,9 @@ class FtsoClient:
 
         FtsoV2Interface.getFeedById(bytes21 _feedId)
         returns (uint256 _value, int8 _decimals, uint64 _timestamp)
-        selector: keccak256("getFeedById(bytes21)")[:4] = 0x93f59c31
+        selector: keccak256("getFeedById(bytes21)")[:4] = 0x93e9f806
         """
-        selector = "0x93f59c31"
+        selector = "0x93e9f806"
         encoded_feed = self._encode_feed_id_bytes21(feed_id_hex)
         return selector + encoded_feed
 
