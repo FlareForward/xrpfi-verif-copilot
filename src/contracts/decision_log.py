@@ -6,7 +6,7 @@ No local redeclaration. Import: from contracts.decision_log import DecisionRecor
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -36,10 +36,10 @@ class FdcProof(BaseModel):
 class ZeroGRecord(BaseModel):
     """0G storage + iNFT references, populated after Orchestrator persists the record."""
 
-    storage_tx_hash: Optional[str] = None
-    inft_token_id: Optional[str] = None
-    inft_explorer_url: Optional[str] = None
-    persisted_at: Optional[datetime] = None
+    storage_tx_hash: str | None = None
+    inft_token_id: str | None = None
+    inft_explorer_url: str | None = None
+    persisted_at: datetime | None = None
 
 
 class DecisionRecord(BaseModel):
@@ -54,14 +54,14 @@ class DecisionRecord(BaseModel):
     record_id: str = Field(default_factory=lambda: str(uuid4()), description="UUID for this record")
     agent_name: str = Field(description="Agent identifier: 'mint-helper' or 'yield-router'")
     agent_ens: str = Field(description="ENS name: 'mint-helper.eth' or 'yield-router.eth'")
-    axl_message_id: Optional[str] = Field(default=None, description="Gensyn AXL message ID if inter-agent")
+    axl_message_id: str | None = Field(default=None, description="Gensyn AXL message ID")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     action_type: Literal["mint", "route", "swap", "redeem", "report", "attest"] = Field(
         description="Category of agent action"
     )
     input_summary: str = Field(description="Brief human-readable description of inputs")
-    ftso_prices: list[FtsoPrice] = Field(default_factory=list, description="FTSO prices at decision time")
-    fdc_proof: Optional[FdcProof] = Field(default=None, description="FDC attestation if cross-chain")
+    ftso_prices: list[FtsoPrice] = Field(default_factory=list, description="FTSO prices")
+    fdc_proof: FdcProof | None = Field(default=None, description="FDC attestation if cross-chain")
     reasoning: str = Field(description="LLM advisory or policy reasoning (one paragraph max)")
     action_taken: str = Field(description="Exact action executed (or 'none' if advisory only)")
     result_summary: str = Field(description="Outcome: success/failure + key metrics")

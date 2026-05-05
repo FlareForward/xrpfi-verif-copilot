@@ -93,7 +93,6 @@ class YieldRouterEnsResolver:
         """
         try:
             from web3 import AsyncWeb3
-            from web3.middleware import ExtraDataToPOAMiddleware  # type: ignore[attr-defined]
         except ImportError as exc:
             raise ImportError("web3 not installed — run: pip install web3") from exc
 
