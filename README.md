@@ -1,5 +1,9 @@
 # XRPFi Verifiable Copilot
 
+![CI](https://github.com/FlareForward/xrpfi-verif-copilot/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
 
 > **0G Mainnet Contract:** [`0x01fE5698a2448d0fc336295df9977796030C79C4`](https://chainscan.0g.ai/address/0x01fE5698a2448d0fc336295df9977796030C79C4)  
@@ -62,35 +66,17 @@ See [DEPLOYMENT_ADDRESSES.md](DEPLOYMENT_ADDRESSES.md) for contract address and 
 ## Quick Start
 
 ```bash
-# 1. Clone
-git clone https://github.com/flareforward/xrpfi-verif-copilot
-cd xrpfi-verif-copilot
-
-# 2. Install (Python 3.12+, uv recommended)
-pip install uv
-uv pip install -e ".[dev]"
-
-# 3. Configure
-cp .env.example .env
-# Fill in GOOGLE_API_KEY (required for agent reasoning)
-# Fill in ZERO_G_PRIVATE_KEY for real 0G storage (optional — demo mode works without)
-
-# 4. Run terminal demo
-python demo/run_demo.py
-
-# Or launch the browser demo
-python demo/run_demo.py --serve
-# Open http://127.0.0.1:8088
-
-# 5. Run tests
-python -m pytest tests/ -v
-```
-
-## Judge Demo
-
-```bash
+pip install uv && uv pip install -e ".[dev]"
+cp .env.example .env          # add GOOGLE_API_KEY
 uv run python demo/judge_demo.py
 ```
+
+```bash
+# Browser UI
+uv run python web/server.py   # open http://localhost:8088
+```
+
+![Demo UI](docs/screenshots/ui-demo.png)
 
 ---
 
