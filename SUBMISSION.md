@@ -1,114 +1,40 @@
-# 0G APAC Hackathon 2026 — Submission
+# XRPFi Verifiable Copilot
 
-**Event:** 0G APAC Hackathon (hackquest.io/hackathons/0G-APAC-Hackathon)  
-**Track:** Track 2 — Agentic Trading Arena / Verifiable Finance  
-**Deadline:** 2026-05-16 23:59 UTC+8  
-**Team:** FlareForward — Steven Hudspeth
+**0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
 
----
+## What It Does
 
-## Project Name
-**XRPFi Verifiable Copilot**
+XRPFi Verifiable Copilot helps XRP holders move toward Flare DeFi without asking them to understand every bridge, oracle, or routing step. Two agents work together: `mint-helper.eth` prepares the FXRP mint path, and `yield-router.eth` chooses a yield route after the mint event is received. Each agent decision is saved as a verifiable record so a judge can inspect what happened and why. 0G provides the proof layer: decision records are designed for decentralized storage, and the demo iNFT on 0G mainnet points to the verifiable agent history. The result is a click-through audit trail for an AI-assisted XRP-to-DeFi flow.
 
-## Tagline
-A 2-agent AI system that helps XRP holders enter Flare DeFi — every decision verifiable on-chain via 0G.
+## Live Proof
 
-## Description
+- **0G iNFT:** token 1 — [chainscan.0g.ai](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd)
+- **0G Storage:** implemented — mainnet upload pending (see `ZERO_G_STORAGE_STATUS.md`)
+- **ENS:** mint-helper.eth + yield-router.eth (Sepolia — resolvers at `src/integrations/ens/`)
+- **Uniswap:** WETH→USDC live quote via Trading API v2 (see `demo/judge_demo.py` step [7])
+- **Gensyn AXL:** cross-node message node A → node B (see `demo/judge_demo.py` step [8])
 
-XRPFi Verifiable Copilot is a production-ready 2-agent system built on 0G + Flare Network. It solves a real user problem: XRP holders want yield on their assets, but bridging to DeFi is complex, opaque, and error-prone. Our system automates the full flow — FXRP minting, yield routing, swap execution — while making every agent decision permanently verifiable via 0G storage and ERC-7857 iNFTs.
+## Sponsor Integrations
 
-### Why 0G Is the Right Trust Layer
+| Sponsor | What was built | Key files | Evidence |
+|---------|---------------|-----------|----------|
+| 0G | Decentralized storage path for every DecisionRecord + ERC-7857 iNFT on mainnet | `src/integrations/zero_g/` | [chainscan.0g.ai token 1 tx](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) |
+| ENS | Dynamic forward/reverse resolution for both agents (no hardcoding) | `src/integrations/ens/` | `mint-helper.eth`, `yield-router.eth` |
+| Uniswap | Trading API v2 swap quotes for yield routing leg | `src/integrations/uniswap/` | `FEEDBACK.md` |
+| Gensyn | AXL cross-node messaging between mint-helper (node 1) and yield-router (node 2) | `src/gensyn/` | `demo/judge_demo.py` step [8] |
 
-Traditional AI agents are black boxes. Users have no way to verify what the agent actually did — which prices it used, what reasoning it applied, whether it executed what it said it would.
-
-We use 0G as the verifiability layer: every `DecisionRecord` (prices, reasoning, actions, timestamps) is serialized and uploaded to 0G decentralized storage. After upload, an ERC-7857 iNFT is minted on 0G mainnet with the storage URI embedded. The iNFT token ID and `chainscan.0g.ai` explorer URL are stored back on the record.
-
-The result: any judge, any auditor, any user can click a link and see exactly what the AI agent decided — on-chain, permanent, tamper-proof.
-
-### The Agent Flow
-
-```
-XRP holder
-    ↓
-mint-helper.eth (Agent A)
-  ├── Checks XRP/USD + FLR/USD prices via FTSO v2 (Flare-native oracle)
-  ├── Attests XRP payment via FDC (Flare Data Connector)
-  ├── Initiates FXRP mint via FAssets v1.3 on Songbird
-  └── Publishes mint.complete event via Gensyn AXL (node 1 → node 2)
-         ↓
-yield-router.eth (Agent B)
-  ├── Receives AXL message from Agent A
-  ├── Fetches Flare DeFi venue yields (SparkDEX, Kinetic, Cyclo)
-  ├── Runs deterministic rebalance policy (pure function, no LLM randomness)
-  ├── Calls Uniswap Trading API v2 for cross-venue swap leg
-  └── Publishes route.plan event via Gensyn AXL
-         ↓
-Orchestrator
-  ├── Persists both DecisionRecords to 0G mainnet storage
-  └── Mints iNFT (ERC-7857) — permanent verifiable audit trail
-         ↓
-✅ chainscan.0g.ai — clickable proof for every judge
-```
-
----
-
-## How It's Built
-
-### Stack
-- **Agent framework**: Google ADK (Gemini 2.0 Flash) with lightweight stub fallback
-- **Flare data**: Flare AI Kit — FTSO v2 price feeds, FDC Payment attestation, FAssets v1.3
-- **Inter-agent comms**: Gensyn AXL REST API with in-process async queue fallback
-- **Storage**: 0G mainnet (Chain ID 16661) — `ZeroGClient` + TS SDK helper
-- **NFT**: ERC-7857 iNFT — `mint(address, encryptedURI, metadataHash)` on 0G
-- **ENS**: web3.py dynamic resolution — no hardcoded addresses
-- **Yield routing**: Uniswap Trading API v2 for cross-venue swap legs
-- **Policy**: Deterministic pure-function rebalance policy (reproducible, auditable)
-- **Shared contract**: PR-0 `DecisionRecord` Pydantic model — single source of truth for both agents
-
-### Architecture Decisions
-- **PR-0 contract module**: Both agents share `src/contracts/decision_log.py`. Enforced by test. No drift.
-- **Fallback-first**: Every external dependency (AXL, 0G, FTSO, ENS, Uniswap) has an in-process fallback. Demonstrable without live credentials.
-- **Deterministic policy**: Same inputs, same outputs. LLM handles reasoning/summarization, not allocation math.
-
----
-
-## 0G Integration Details
-
-**Key files:**
-- `src/integrations/zero_g/client.py` — upload DecisionRecord JSON to 0G storage
-- `src/integrations/zero_g/inft.py` — mint ERC-7857 iNFT on 0G mainnet
-- `contracts/XRPFiINFT.sol` — Solidity contract (deployed to 0G mainnet)
-- `contracts/deploy.py` — deploy script (mainnet-ready, reads from .env)
-
-**Network:** 0G mainnet (Chain ID 16661), RPC `https://evmrpc-mainnet.0g.ai`  
-**Explorer:** https://chainscan.0g.ai/  
-**Contract:** See `DEPLOYMENT_ADDRESSES.md`
-
----
-
-## Quick Start
+## How to Run
 
 ```bash
-git clone https://github.com/flareforward/xrpfi-verif-copilot
-cd xrpfi-verif-copilot
-pip install uv
-uv sync --extra dev
-cp .env.example .env
-# Add GOOGLE_API_KEY to .env
-uv run python demo/run_demo.py
+pip install uv && uv pip install -e ".[dev]"
+cp .env.example .env  # add GOOGLE_API_KEY
+uv run python demo/judge_demo.py
 ```
 
----
+## Demo Video
 
-## Tests
+Demo video: pending final capture.
 
-```bash
-uv run pytest tests/ -q        # 151 passed
-uv run ruff check src/ tests/ demo/  # All checks passed
-```
+## GitHub
 
----
-
-## Team
-FlareForward — Steven Hudspeth  
-Built for 0G APAC Hackathon 2026.
+https://github.com/flareforward/xrpfi-verif-copilot

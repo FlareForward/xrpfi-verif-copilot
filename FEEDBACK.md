@@ -2,6 +2,7 @@
 
 > **Uniswap Prize Gate:** This file is required for Uniswap Foundation prize eligibility.
 > It documents our developer experience building on top of Uniswap integrations.
+> Built for **0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena**.
 
 ---
 
@@ -9,9 +10,13 @@
 
 XRPFi Verifiable Copilot is a 2-agent system that helps XRP holders enter Flare DeFi
 end-to-end: FXRP minting via FAssets v1.3 → yield routing via Uniswap API + Flare DeFi venues.
-Every agent decision is persisted to 0G storage and minted as an iNFT for verifiability.
+Every agent decision is persisted through the 0G storage path and represented by an iNFT for verifiability.
 
-Built for **ETHGlobal Open Agents 2026** in ~48h.
+Built for **0G APAC Hackathon 2026** in ~48h.
+
+## Why 0G?
+
+0G is the core trust layer for this project, not a badge added at the end. XRPFi Verifiable Copilot asks users to trust AI agents with sensitive DeFi routing decisions, so every material decision needs an external proof surface that judges and users can inspect. 0G storage gives each `DecisionRecord` a decentralized home once uploaded, while the ERC-7857 iNFT gives the session a durable, clickable ownership and audit object on 0G mainnet. Without 0G, the demo would be another opaque agent flow; with 0G, the agent's reasoning and actions become verifiable artifacts.
 
 ---
 
@@ -95,10 +100,11 @@ from `https://api.uniswap.org/v2`.
 
 ## 0G Integration Notes
 
-- Python SDK (`0g-storage-sdk 0.2.1`) uploads work via the SDK; HTTP fallback also works
-- iNFT (ERC-7857) minting requires a deployed iNFT contract on 0G Newton testnet — we
-  deploy one for the demo; the contract address is in `DEPLOYMENT_ADDRESSES.md`
-- Newton testnet faucet provides 0.1 OG/day — sufficient for hackathon demo transactions
+- Python SDK (`0g-storage-sdk 0.2.1`) integration is implemented through `src/integrations/zero_g/`
+- iNFT (ERC-7857) minting uses a deployed iNFT contract on 0G mainnet; the contract address
+  and token 1 transaction are in `DEPLOYMENT_ADDRESSES.md`
+- Mainnet storage upload is implemented, with current status tracked transparently in
+  `ZERO_G_STORAGE_STATUS.md` when an upload transaction is unavailable
 
 ---
 
@@ -112,4 +118,4 @@ from `https://api.uniswap.org/v2`.
 
 ---
 
-*Last updated: 2026-05-04 by XRPFi Verifiable Copilot team*
+*Last updated: 2026-05-05 by XRPFi Verifiable Copilot team*
