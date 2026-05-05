@@ -86,6 +86,12 @@ python demo/run_demo.py --serve
 python -m pytest tests/ -v
 ```
 
+## Judge Demo
+
+```bash
+uv run python demo/judge_demo.py
+```
+
 ---
 
 ## 0G Integration

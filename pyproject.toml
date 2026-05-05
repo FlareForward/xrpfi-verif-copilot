@@ -39,6 +39,9 @@ dependencies = [
     "py-solc-x>=2.0.5",
 ]
 
+[project.scripts]
+xrpfi-judge = "demo.judge_demo:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest-mock>=3.14.0",
