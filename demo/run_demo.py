@@ -23,9 +23,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -60,7 +59,7 @@ async def step_fetch_ftso_prices() -> list[FtsoPrice]:
     except (ImportError, Exception) as e:
         log.warning("ftso_fallback", reason=str(e))
         # Fixture prices for demo if Coston2 unavailable
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return [
             FtsoPrice(
                 feed_id="0x014658522f555344000000000000000000000000000000",
@@ -154,7 +153,8 @@ async def step_mint_fxrp(ftso_prices: list[FtsoPrice]) -> DecisionRecord:
         result = f"Collateral reservation ID: {mint_result.get('reservation_id', 'demo-123')}"
     except (ImportError, Exception) as e:
         log.warning("fassets_fallback", reason=str(e))
-        action = f"FAssets mint initiated for {DEMO_XRP_AMOUNT} XRP → ~{DEMO_XRP_AMOUNT * 0.99:.2f} FXRP"
+        fxrp_est = DEMO_XRP_AMOUNT * 0.99
+        action = f"FAssets mint initiated for {DEMO_XRP_AMOUNT} XRP → ~{fxrp_est:.2f} FXRP"
         result = "Collateral reservation ID: demo-colres-001 (Songbird testnet)"
 
     record = DecisionRecord(
@@ -180,8 +180,8 @@ async def step_route_yield(
     """Step 5: yield-router recommends + executes yield allocation."""
     log.info("step", n=5, action="yield-router: recommending yield allocation")
     try:
-        from src.policies.rebalance_policy import recommend_allocation  # type: ignore[import]
         from src.integrations.defi_venues.catalog import DeFiVenueCatalog  # type: ignore[import]
+        from src.policies.rebalance_policy import recommend_allocation  # type: ignore[import]
         catalog = DeFiVenueCatalog()
         venues = await catalog.get_venues()
         allocation = recommend_allocation(
@@ -194,8 +194,10 @@ async def step_route_yield(
     except (ImportError, Exception) as e:
         log.warning("rebalance_fallback", reason=str(e))
         allocation = [
-            {"venue_id": "sparkdex-v2", "allocation_pct": 0.60, "amount_usd": fxrp_amount * 0.30},
-            {"venue_id": "kinetic-lending", "allocation_pct": 0.40, "amount_usd": fxrp_amount * 0.20},
+            {"venue_id": "sparkdex-v2", "allocation_pct": 0.60,
+             "amount_usd": fxrp_amount * 0.30},
+            {"venue_id": "kinetic-lending", "allocation_pct": 0.40,
+             "amount_usd": fxrp_amount * 0.20},
         ]
         alloc_summary = json.dumps(allocation, indent=2)
 
@@ -211,7 +213,10 @@ async def step_route_yield(
             "Risk preference: medium. Uniswap swap for cross-venue leg."
         ),
         action_taken=f"Allocation plan: {alloc_summary}",
-        result_summary=f"Route plan committed. {len(allocation)} venues. Total = {fxrp_amount:.2f} FXRP.",
+        result_summary=(
+            f"Route plan committed. {len(allocation)} venues. "
+            f"Total = {fxrp_amount:.2f} FXRP."
+        ),
     )
     log.info("route_complete", venues=len(allocation))
     return record
@@ -312,7 +317,8 @@ async def main() -> None:
     print("=" * 70)
     print(f"  Agents:        mint-helper.eth → {mint_helper_addr[:18]}...")
     print(f"                 yield-router.eth → {yield_router_addr[:18]}...")
-    print(f"  FTSO prices:   FLR/USD={ftso_prices[0].price_usd}, XRP/USD={ftso_prices[1].price_usd if len(ftso_prices)>1 else 'n/a'}")
+    xrp_price = ftso_prices[1].price_usd if len(ftso_prices) > 1 else "n/a"
+    print(f"  FTSO prices:   FLR/USD={ftso_prices[0].price_usd}, XRP/USD={xrp_price}")
     print(f"  XRP minted:    {DEMO_XRP_AMOUNT} XRP → {fxrp_minted:.2f} FXRP")
     print(f"  Decisions:     {len(records)} records persisted to 0G")
     print(f"  0G storage:    {tx_hashes[0][:40] if tx_hashes else 'demo'}...")

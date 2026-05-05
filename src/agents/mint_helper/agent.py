@@ -327,7 +327,7 @@ async def initiate_mint(
 # Agent instantiation
 # ---------------------------------------------------------------------------
 mint_helper_agent = Agent(
-    name="mint-helper",
+    name="mint_helper",
     model="gemini-2.0-flash",
     description="Helps XRP holders mint FXRP via FAssets v1.3 on Flare",
     instruction=SYSTEM_PROMPT,

@@ -59,7 +59,10 @@ class ZeroGClient:
 
     def _check_sdk(self) -> bool:
         """Check if the Node.js 0G TS SDK helper is available."""
-        helper = Path(__file__).parent.parent.parent.parent / "contracts" / "storage_upload" / "upload.mjs"
+        helper = (
+            Path(__file__).parent.parent.parent.parent
+            / "contracts" / "storage_upload" / "upload.mjs"
+        )
         if helper.exists() and self.private_key:
             try:
                 result = subprocess.run(["node", "--version"], capture_output=True, timeout=5)
@@ -106,7 +109,10 @@ class ZeroGClient:
 
     async def _upload_via_sdk(self, data: bytes, root_hash: str) -> StorageResult:
         """Upload using the official 0G TypeScript SDK via Node.js subprocess."""
-        helper = Path(__file__).parent.parent.parent.parent / "contracts" / "storage_upload" / "upload.mjs"
+        helper = (
+            Path(__file__).parent.parent.parent.parent
+            / "contracts" / "storage_upload" / "upload.mjs"
+        )
         try:
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="wb") as tmp:
                 tmp.write(data)

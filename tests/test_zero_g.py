@@ -6,14 +6,14 @@ Regression pins — per Silent Regression Protocol, do NOT weaken these tests.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.contracts.decision_log import DecisionRecord, FtsoPrice, ZeroGRecord
-from src.integrations.zero_g.client import ZeroGClient, StorageResult
-from src.integrations.zero_g.inft import INFTMinter, MintResult
+from src.contracts.decision_log import DecisionRecord, FtsoPrice
+from src.integrations.zero_g.client import StorageResult, ZeroGClient
+from src.integrations.zero_g.inft import INFTMinter
 
 
 def make_record(agent_name: str = "mint-helper") -> DecisionRecord:
@@ -28,7 +28,7 @@ def make_record(agent_name: str = "mint-helper") -> DecisionRecord:
                 feed_name="FLR/USD",
                 price_usd=0.025,
                 decimals=7,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
         ],
         reasoning="Test reasoning",
@@ -73,7 +73,7 @@ class TestZeroGClient:
                     tx_hash="0xabc123",
                     root_hash="0xdeadbeef",
                     size_bytes=100,
-                    stored_at=datetime.now(timezone.utc),
+                    stored_at=datetime.now(UTC),
                     explorer_url="https://chainscan-newton.0g.ai/tx/0xabc123",
                 )
             ),

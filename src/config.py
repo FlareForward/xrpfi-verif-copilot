@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-from typing import Optional
-
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -45,14 +42,14 @@ class Settings(BaseSettings):
         default="https://evmrpc-testnet.0g.ai",
         description="0G EVM RPC endpoint",
     )
-    zero_g_private_key: Optional[str] = Field(default=None, description="0G testnet deployer key")
+    zero_g_private_key: str | None = Field(default=None, description="0G testnet deployer key")
 
     # Uniswap
     uniswap_api_url: str = Field(
         default="https://api.uniswap.org/v2",
         description="Uniswap Trading API base URL",
     )
-    uniswap_api_key: Optional[str] = Field(default=None, description="Uniswap API key if required")
+    uniswap_api_key: str | None = Field(default=None, description="Uniswap API key if required")
 
     # Gensyn AXL
     axl_node_a_endpoint: str = Field(
@@ -73,12 +70,12 @@ class Settings(BaseSettings):
     )
 
     # Agent signing key (testnet only — never mainnet)
-    agent_private_key: Optional[str] = Field(default=None, description="Testnet-only signing key")
+    agent_private_key: str | None = Field(default=None, description="Testnet-only signing key")
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
 def get_settings() -> Settings:

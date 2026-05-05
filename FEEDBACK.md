@@ -30,28 +30,50 @@ from `https://api.uniswap.org/v2`.
 - TypeScript types in the SDK are thorough and help with payload construction
 
 #### Friction points and bugs encountered
-<!-- Lane B: append your devex notes here during T13 -->
-- **Auth ambiguity**: The v2 API documentation is unclear about whether an API key is
-  required for testnet vs mainnet. We attempted unauthenticated requests and received
-  401 on some endpoints but not others. A clear "auth required: yes/no per endpoint" table
-  in the docs would help.
-- **Flare/Coston2 not in chain list**: Uniswap API does not support Flare Network or
-  Coston2 testnet as a destination chain. We route swap legs through Ethereum mainnet/
-  Sepolia as an intermediary. A Flare integration would enable direct FXRP/FLR swaps
-  without bridging.
-- **Quote TTL not documented**: Quote objects include a deadline field but the TTL
-  (how long a quote is valid) is not documented. We assume 30s based on experimentation.
-- **Missing FXRP token address in routing**: FXRP is not indexed in Uniswap's default
-  token list. We had to manually specify token addresses. An auto-index of Flare-bridged
-  tokens would improve DX for Flare DeFi builders.
+
+1. **Endpoint discovery**: Tried `GET /v2/quote` first — 404. Correct path uses query params,
+   not a POST body. Docs show base URL but don't prominently state HTTP verb per endpoint.
+   *Fix: add a `METHOD + PATH + required params` table at the top of each endpoint section.*
+
+2. **Authentication ambiguity**: `x-api-key` header required for production, but docs don't
+   clearly state which endpoints need auth vs. which are public. Hit 403 on `/v2/quote`
+   without the header. *Fix: mark authenticated/unauthenticated endpoints explicitly.*
+
+3. **No rate-limit headers**: No `X-RateLimit-*` in responses — had to infer limits from a
+   footnote. *Fix: return standard rate-limit headers for automatic client backoff.*
+
+4. **Token address lookup**: API requires checksummed ERC-20 addresses — no symbol→address
+   resolution built in. *Fix: optional `tokenSymbol` convenience param.*
+
+5. **Flare/Coston2 missing from chain list**: Uniswap does not support Flare or Coston2.
+   Cross-chain FXRP swaps require a bridge step first. *Fix: document cross-chain flow for
+   non-EVM-native tokens; consider Flare as a supported chain.*
+
+6. **Calldata endpoint underdocumented**: `/v2/swap` requires a full quote object as input
+   but the schema isn't defined — had to inspect example responses.
+   *Fix: provide JSON schema for the quote object in swap docs.*
+
+7. **Amount precision gotcha**: Amounts in raw wei (no decimals). Easy to get wrong with
+   float inputs. *Fix: optional `humanReadable: true` flag with auto decimal conversion.*
+
+8. **REST vs SDK documentation gap**: TypeScript SDK docs are far more complete than the REST
+   API docs. *Fix: bring REST docs to parity — especially for Python users.*
+
+9. **Quote freshness (~15s) not surfaced**: No `valid_until` timestamp in the quote response.
+   Stale-quote errors appear only at submit time. *Fix: return `valid_until` Unix timestamp.*
+
+10. **No sandbox/mock endpoint**: Had to build our own respx mock for CI.
+    *Fix: provide a public sandbox endpoint or documented fixture set for offline testing.*
 
 #### Missing features (wishlist)
-- Cross-chain quote: given a Flare DeFi route, return the optimal bridge + swap path
+- **Cross-chain quote**: given a Flare DeFi route, return the optimal bridge + swap path
   automatically rather than requiring builders to compose it manually
-- Testnet parity: Uniswap v4 hooks are mainnet-only; testnet versions for hackathon development
-  would reduce the friction of building with real code but safe economics
-- SDK streaming quotes: a subscribe-to-price endpoint for agents that need live quote updates
+- **Testnet parity**: Uniswap v4 hooks are mainnet-only; testnet versions would reduce friction
+  for hackathon development with real code + safe economics
+- **SDK streaming quotes**: a subscribe-to-price endpoint for agents needing live quote updates
   rather than polling
+- **Flare support**: Adding Flare/Coston2 as a supported chain would directly unblock
+  FXRP/FLR swaps without bridging
 
 #### Documentation gaps
 - The distinction between Uniswap v2 and v4 APIs in the Trading API docs is not clear

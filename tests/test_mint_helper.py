@@ -12,13 +12,12 @@ from __future__ import annotations
 
 import inspect
 import re
-import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice
+from src.contracts.decision_log import DecisionRecord, FtsoPrice
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +76,7 @@ class TestGetFtsoPrice:
             feed_name="XRP/USD",
             price_usd=0.50,
             decimals=7,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_stale=False,
         )
 
@@ -208,14 +207,13 @@ class TestEnsResolverDynamic:
 
         with patch.object(
             resolver, "_resolve_via_web3", new_callable=AsyncMock, return_value=None
+        ), patch.object(
+            resolver,
+            "_resolve_via_rpc",
+            new_callable=AsyncMock,
+            return_value=dynamic_address,
         ):
-            with patch.object(
-                resolver,
-                "_resolve_via_rpc",
-                new_callable=AsyncMock,
-                return_value=dynamic_address,
-            ):
-                address = await resolver.resolve("mint-helper.eth")
+            address = await resolver.resolve("mint-helper.eth")
 
         assert address == dynamic_address
         # Verify the address did NOT come from a hardcoded constant
@@ -229,17 +227,16 @@ class TestEnsResolverDynamic:
     @pytest.mark.asyncio
     async def test_resolve_uses_fallback_when_not_registered(self) -> None:
         """When live resolution fails, falls back to TEST_ADDRESSES and logs warning."""
-        from src.integrations.ens.resolver import EnsResolver, TEST_ADDRESSES
+        from src.integrations.ens.resolver import TEST_ADDRESSES, EnsResolver
 
         resolver = EnsResolver()
 
         with patch.object(
             resolver, "_resolve_via_web3", new_callable=AsyncMock, return_value=None
+        ), patch.object(
+            resolver, "_resolve_via_rpc", new_callable=AsyncMock, return_value=None
         ):
-            with patch.object(
-                resolver, "_resolve_via_rpc", new_callable=AsyncMock, return_value=None
-            ):
-                address = await resolver.resolve("mint-helper.eth")
+            address = await resolver.resolve("mint-helper.eth")
 
         # Must use fallback from TEST_ADDRESSES, not a bare hardcoded string
         assert address == TEST_ADDRESSES["mint-helper.eth"]
@@ -252,12 +249,10 @@ class TestEnsResolverDynamic:
 
         with patch.object(
             resolver, "_resolve_via_web3", new_callable=AsyncMock, return_value=None
-        ):
-            with patch.object(
-                resolver, "_resolve_via_rpc", new_callable=AsyncMock, return_value=None
-            ):
-                with pytest.raises(ValueError, match="could not resolve"):
-                    await resolver.resolve("nonexistent-unknown-name-xrpfi.eth")
+        ), patch.object(
+            resolver, "_resolve_via_rpc", new_callable=AsyncMock, return_value=None
+        ), pytest.raises(ValueError, match="could not resolve"):
+            await resolver.resolve("nonexistent-unknown-name-xrpfi.eth")
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +278,6 @@ class TestAxlPublisherFallbackMode:
         )
 
         # Force fallback by making AXL node unreachable
-        import httpx
 
         with patch.object(
             publisher,
@@ -351,7 +345,7 @@ class TestAxlPublisherFallbackMode:
 
     @pytest.mark.asyncio
     async def test_fallback_message_ends_up_in_queue(self) -> None:
-        from src.gensyn.node_a.publisher import AxlPublisher, AXL_TOPIC
+        from src.gensyn.node_a.publisher import AXL_TOPIC, AxlPublisher
 
         publisher = AxlPublisher()
         record = DecisionRecord(
@@ -381,7 +375,7 @@ class TestAxlPublisherFallbackMode:
 def test_mint_helper_agent_name() -> None:
     from src.agents.mint_helper.agent import mint_helper_agent
 
-    assert mint_helper_agent.name == "mint-helper"
+    assert mint_helper_agent.name == "mint_helper"
 
 
 def test_mint_helper_agent_has_all_tools() -> None:

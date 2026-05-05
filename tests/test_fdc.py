@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.contracts.decision_log import FdcProof
-from src.integrations.fdc.client import FdcClient, PAYMENT_TYPE, XRPL_CHAIN_ID
+from src.integrations.fdc.client import PAYMENT_TYPE, XRPL_CHAIN_ID, FdcClient
 
 
 # ---------------------------------------------------------------------------
@@ -23,6 +23,7 @@ from src.integrations.fdc.client import FdcClient, PAYMENT_TYPE, XRPL_CHAIN_ID
 def test_fdc_proof_imported_from_contracts_module() -> None:
     """Pin: FdcProof must come from contracts.decision_log, never redeclared."""
     import inspect
+
     import src.integrations.fdc.client as fdc_module
 
     source = inspect.getsource(fdc_module)

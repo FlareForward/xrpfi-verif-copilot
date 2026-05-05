@@ -10,7 +10,7 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -23,6 +23,7 @@ from src.integrations.fassets.client import FAssetsClient
 def test_fassets_client_does_not_redeclare_decision_record() -> None:
     """Pin: FAssetsClient must not redeclare DecisionRecord locally."""
     import inspect
+
     import src.integrations.fassets.client as fa_module
 
     source = inspect.getsource(fa_module)

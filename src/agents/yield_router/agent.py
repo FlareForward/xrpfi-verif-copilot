@@ -358,7 +358,7 @@ async def get_route_plan(
 # Agent instantiation
 # ---------------------------------------------------------------------------
 yield_router_agent = Agent(
-    name="yield-router",
+    name="yield_router",
     model="gemini-2.0-flash",
     description="Routes minted FXRP to optimal yield on Flare DeFi",
     instruction=SYSTEM_PROMPT,

@@ -11,12 +11,11 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 from src.contracts.decision_log import DecisionRecord, FtsoPrice
-
 
 # ---------------------------------------------------------------------------
 # DecisionRecord import invariant
@@ -48,7 +47,7 @@ class TestYieldRouterAgent:
     def test_agent_instantiated(self) -> None:
         from src.agents.yield_router.agent import yield_router_agent
         assert yield_router_agent is not None
-        assert yield_router_agent.name == "yield-router"
+        assert yield_router_agent.name == "yield_router"
 
     def test_agent_has_correct_model(self) -> None:
         from src.agents.yield_router.agent import yield_router_agent
@@ -206,9 +205,9 @@ class TestAxlFallback:
     @pytest.mark.asyncio
     async def test_subscriber_receives_from_publisher(self) -> None:
         """Cross-node: publisher pushes to queue; subscriber reads it."""
-        from src.gensyn.node_b.publisher import AxlPublisher
-        from src.gensyn.node_b.subscriber import AxlSubscriber, get_fallback_queue
         from src.config import get_settings
+        from src.gensyn.node_b.publisher import AxlPublisher
+        from src.gensyn.node_b.subscriber import get_fallback_queue
 
         settings = get_settings()
         topic = settings.axl_topic_route_plan
@@ -231,8 +230,8 @@ class TestAxlFallback:
     @pytest.mark.asyncio
     async def test_subscriber_calls_handler(self) -> None:
         """Subscriber delivers a DecisionRecord to the handler."""
-        from src.gensyn.node_b.subscriber import AxlSubscriber, get_fallback_queue
         from src.config import get_settings
+        from src.gensyn.node_b.subscriber import AxlSubscriber, get_fallback_queue
 
         settings = get_settings()
         topic = settings.axl_topic_mint_complete
@@ -307,7 +306,7 @@ class TestEnsResolverB:
     @pytest.mark.asyncio
     async def test_resolve_falls_back_to_address(self) -> None:
         """When ENS is unreachable, resolve() returns the fallback address."""
-        from src.integrations.ens.resolver_b import YieldRouterEnsResolver, FALLBACK_ADDRESS
+        from src.integrations.ens.resolver_b import FALLBACK_ADDRESS, YieldRouterEnsResolver
         # Use an invalid RPC URL to force fallback
         r = YieldRouterEnsResolver(rpc_url="http://localhost:1")
         addr = await r.resolve()
@@ -332,7 +331,7 @@ def _make_route_record() -> DecisionRecord:
                 feed_name="XRP/USD",
                 price_usd=0.50,
                 decimals=6,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
         ],
         reasoning="Deterministic policy applied.",
@@ -353,7 +352,7 @@ def _make_mint_record() -> DecisionRecord:
                 feed_name="XRP/USD",
                 price_usd=0.50,
                 decimals=6,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
         ],
         reasoning="FAssets mint initiated.",

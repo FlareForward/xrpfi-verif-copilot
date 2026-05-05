@@ -7,7 +7,7 @@ produce the same outputs. Silent Regression Protocol: do NOT weaken these tests.
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -26,14 +26,14 @@ def make_ftso() -> list[FtsoPrice]:
             feed_name="XRP/USD",
             price_usd=0.50,
             decimals=6,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         FtsoPrice(
             feed_id="0x014658522f555344",
             feed_name="FLR/USD",
             price_usd=0.025,
             decimals=7,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
     ]
 
@@ -66,7 +66,7 @@ def test_rebalance_policy_is_deterministic() -> None:
             feed_name="FLR/USD",
             price_usd=0.025,
             decimals=7,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
     ]
     venues = [

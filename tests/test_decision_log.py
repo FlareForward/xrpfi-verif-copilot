@@ -4,11 +4,11 @@ These tests pin the invariants that must hold for all agent outputs.
 DO NOT weaken or remove — per Silent Regression Protocol.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
-from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice, ZeroGRecord
+from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice
 
 
 def make_ftso_price(feed_id: str = "0x014658522f555344", price: float = 0.025) -> FtsoPrice:
@@ -17,7 +17,7 @@ def make_ftso_price(feed_id: str = "0x014658522f555344", price: float = 0.025) -
         feed_name="FLR/USD",
         price_usd=price,
         decimals=7,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
