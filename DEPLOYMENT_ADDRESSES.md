@@ -48,12 +48,21 @@
 
 | Name | Status |
 |------|--------|
-| `mint-helper.eth` | Live ENS resolution first; explicit fallback only while name is unregistered (see `resolver.py`) |
-| `yield-router.eth` | Live ENS resolution first; explicit fallback only while name is unregistered (see `resolver_b.py`) |
+| `mint-helper.eth` | Sepolia registration prepared; blocked on funding wallet `0x6CC5C6dacdf110E40f30A4c8945CD5D0Cb1290Ab` (0 ETH at 2026-05-05 check) |
+| `yield-router.eth` | Sepolia registration prepared; blocked on funding wallet `0x6CC5C6dacdf110E40f30A4c8945CD5D0Cb1290Ab` (0 ETH at 2026-05-05 check) |
 
 **Registration target:** Sepolia for hackathon identity testing, mainnet before production.
 
 **Resolver note:** The in-tree resolver now uses Ethereum Keccak namehash and no longer short-circuits web3 resolution into fallback mode.
+
+**Repeatable registration script:** `scripts/register_ens.py`
+
+**Funding blocker:** The configured Sepolia signing wallet currently has 0 ETH. Fund it with
+at least 0.05 Sepolia ETH, then run:
+
+```bash
+uv run python scripts/register_ens.py
+```
 
 ## 0G Storage
 

@@ -10,7 +10,7 @@ XRPFi Verifiable Copilot helps XRP holders move toward Flare DeFi without asking
 
 - **0G iNFT:** token 1 — [chainscan.0g.ai](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd)
 - **0G Storage:** implemented — mainnet upload pending (see `ZERO_G_STORAGE_STATUS.md`)
-- **ENS:** mint-helper.eth + yield-router.eth (Sepolia — resolvers at `src/integrations/ens/`)
+- **ENS:** mint-helper.eth + yield-router.eth (Sepolia registration script ready; live tx pending funded wallet)
 - **Uniswap:** WETH→USDC live quote via Trading API v2 (see `demo/judge_demo.py` step [7])
 - **Gensyn AXL:** cross-node message node A → node B (see `demo/judge_demo.py` step [8])
 
