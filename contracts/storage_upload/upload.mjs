@@ -9,7 +9,7 @@
  * 0G mainnet defaults. Override with ZERO_G_RPC_URL, ZERO_G_STORAGE_URL, ZERO_G_EXPLORER.
  */
 
-import { Indexer, ZgFile } from "@0glabs/0g-ts-sdk";
+import { getFlowContract, Indexer, Uploader, ZgFile } from "@0glabs/0g-ts-sdk";
 import { ethers } from "ethers";
 import path from "path";
 
@@ -17,6 +17,8 @@ const EVM_RPC = process.env.ZERO_G_RPC_URL || "https://0g-rpc.publicnode.com";
 const INDEXER = process.env.ZERO_G_STORAGE_URL || "https://indexer-storage-turbo.0g.ai";
 const EXPLORER = process.env.ZERO_G_EXPLORER || "https://chainscan.0g.ai";
 const EXPECTED_CHAIN_ID = BigInt(process.env.ZERO_G_CHAIN_ID || "16661");
+const FLOW_CONTRACT = process.env.ZERO_G_FLOW_CONTRACT
+  || "0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526";
 
 async function upload(filePath, privateKey) {
   // Provider + signer
@@ -42,9 +44,22 @@ async function upload(filePath, privateKey) {
 
   const rootHash = tree.rootHash();
 
-  // Upload via indexer
+  // Upload via indexer, but pin the mainnet Flow contract explicitly. Some
+  // storage nodes can report stale Galileo/testnet flow addresses in status.
   const indexer = new Indexer(INDEXER);
-  const [uploadResult, uploadErr] = await indexer.upload(file, EVM_RPC, signer);
+  const [clients, nodeErr] = await indexer.selectNodes(1);
+  if (nodeErr) throw new Error(`Node selection error: ${nodeErr}`);
+
+  const flow = getFlowContract(FLOW_CONTRACT, signer);
+  const uploader = new Uploader(clients, EVM_RPC, flow);
+  const [uploadResult, uploadErr] = await uploader.uploadFile(file, {
+    tags: "0x",
+    finalityRequired: true,
+    taskSize: 10,
+    expectedReplica: 1,
+    skipTx: false,
+    fee: 0n,
+  });
   if (uploadErr) throw new Error(`Upload error: ${uploadErr}`);
 
   await file.close();
@@ -63,6 +78,7 @@ async function upload(filePath, privateKey) {
     storage_scan_url: `https://storagescan.0g.ai/file?cid=${uploadedRoot}`,
     indexer_url: INDEXER,
     rpc_url: EVM_RPC,
+    flow_contract: FLOW_CONTRACT,
     chain_id: network.chainId.toString(),
   };
 }

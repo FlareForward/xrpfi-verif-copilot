@@ -43,6 +43,10 @@ class Settings(BaseSettings):
         description="0G EVM RPC endpoint (mainnet default)",
     )
     zero_g_chain_id: int = Field(default=16661, description="0G chain ID (16661 = mainnet)")
+    zero_g_flow_contract: str = Field(
+        default="0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526",
+        description="0G mainnet Flow contract for storage uploads",
+    )
     zero_g_explorer: str = Field(
         default="https://chainscan.0g.ai",
         description="0G block explorer base URL",

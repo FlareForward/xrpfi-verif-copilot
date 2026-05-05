@@ -30,6 +30,10 @@ ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://0g-rpc.publicnode.com
 ZERO_G_INDEXER_URL = os.environ.get("ZERO_G_STORAGE_URL", "https://indexer-storage-turbo.0g.ai")
 ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
 ZERO_G_EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
+ZERO_G_FLOW_CONTRACT = os.environ.get(
+    "ZERO_G_FLOW_CONTRACT",
+    "0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526",
+)
 
 
 class StorageResult(BaseModel):
@@ -53,10 +57,12 @@ class ZeroGClient:
         self,
         evm_rpc: str = ZERO_G_EVM_RPC,
         indexer_url: str = ZERO_G_INDEXER_URL,
+        flow_contract: str = ZERO_G_FLOW_CONTRACT,
         private_key: str | None = None,
     ) -> None:
         self.evm_rpc = evm_rpc
         self.indexer_url = indexer_url
+        self.flow_contract = flow_contract
         self.private_key = private_key
         self._sdk_available = self._check_sdk()
 
@@ -127,6 +133,14 @@ class ZeroGClient:
                 capture_output=True,
                 text=True,
                 timeout=120,
+                env={
+                    **os.environ,
+                    "ZERO_G_RPC_URL": self.evm_rpc,
+                    "ZERO_G_STORAGE_URL": self.indexer_url,
+                    "ZERO_G_CHAIN_ID": str(ZERO_G_CHAIN_ID),
+                    "ZERO_G_EXPLORER": ZERO_G_EXPLORER,
+                    "ZERO_G_FLOW_CONTRACT": self.flow_contract,
+                },
             )
             if result.returncode == 0:
                 output = self._parse_helper_output(result.stdout)
