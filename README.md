@@ -1,6 +1,9 @@
 # XRPFi Verifiable Copilot
 
-**ETHGlobal Open Agents 2026 submission by FlareForward**
+**0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
+
+> **0G Mainnet Contract:** `DEPLOYMENT_ADDRESSES.md` ← filled after deploy  
+> **Explorer:** https://chainscan.0g.ai
 
 A 2-agent AI system that helps XRP holders enter Flare DeFi end-to-end — with every decision verified on-chain and stored as an iNFT on 0G.
 
@@ -26,21 +29,32 @@ User → mint-helper.eth (Agent A, AXL node 1)
             │ Flare DeFi venue catalog + Uniswap swap + rebalance policy
             │
             ▼
-      0G Storage → iNFT (ERC-7857) on 0G Newton testnet
+      0G Storage → iNFT (ERC-7857) on 0G mainnet (Chain ID 16661)
+            │
+            ▼
+      chainscan.0g.ai — permanent, clickable proof
 ```
 
 See [docs/architecture.md](docs/architecture.md) for full diagram.
 
 ---
 
-## Sponsor Prize Stack
+## Track Alignment — 0G APAC Hackathon
 
-| Sponsor | Prize Target | How We Qualify |
-|---------|-------------|----------------|
-| **0G** | $7,500 (Track B, 5×$1.5k) | iNFT minted on 0G Newton testnet. [Deployment addresses](DEPLOYMENT_ADDRESSES.md). SDK usage explained below. |
-| **ENS** | $2,500 | `mint-helper.eth` + `yield-router.eth` resolve dynamically (no hardcoded values). Working ENS demo. |
-| **Uniswap** | $2,500 | Agent B calls Uniswap Trading API v2 for swap legs. [FEEDBACK.md](FEEDBACK.md) documents devex. |
-| **Gensyn** | $2,500 | AXL cross-node comms: node 1 publishes `xrpfi.mint.complete`; node 2 subscribes + publishes `xrpfi.route.plan`. Separate nodes. Built during hackathon. |
+**Track 2: Agentic Trading Arena / Verifiable Finance** — This project qualifies because:
+
+1. **AI agents executing financial operations**: Two Google ADK agents autonomously handle FXRP minting, yield routing, and swap execution.
+2. **Verifiable on-chain audit trail**: Every agent decision is stored on 0G decentralized storage and minted as an ERC-7857 iNFT — permanent, tamper-proof, clickable on `chainscan.0g.ai`.
+3. **0G as the trust layer**: 0G Storage + iNFT mint is not bolted on — it's the core verification primitive. Without 0G, the system has no verifiability story.
+4. **Real market**: XRP has 5M+ holders. FAssets v1.3 launched April 2026. The path from XRP to Flare DeFi yield exists and is underserved.
+
+| 0G Component | Integration |
+|---|---|
+| 0G Storage | Every `DecisionRecord` JSON uploaded via `ZeroGClient` |
+| ERC-7857 iNFT | Minted on 0G mainnet (Chain ID 16661) per session |
+| 0G Explorer | `chainscan.0g.ai` link in every iNFT — judge-clickable proof |
+
+See [DEPLOYMENT_ADDRESSES.md](DEPLOYMENT_ADDRESSES.md) for contract address and demo tx hash.
 
 ---
 
@@ -90,8 +104,8 @@ inft = await minter.mint_decision_log(records, recipient, storage_uri)
 print(inft.explorer_url)  # https://chainscan-newton.0g.ai/token/<id>
 ```
 
-**Newton testnet:** RPC `https://evmrpc-testnet.0g.ai`, Chain ID 16600
-**Explorer:** https://chainscan-newton.0g.ai/
+**0G Mainnet:** RPC `https://evmrpc-mainnet.0g.ai`, Chain ID 16661  
+**Explorer:** https://chainscan.0g.ai/
 
 ---
 
@@ -208,10 +222,10 @@ python -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 ## Team
 
-Built by **FlareForward** for ETHGlobal Open Agents 2026.
+Built by **FlareForward** (Steven Hudspeth) for 0G APAC Hackathon 2026.
 
+- X/Twitter: *(add handle)*
 - Telegram: *(add)*
-- X/Twitter: *(add)*
 
 ---
 
