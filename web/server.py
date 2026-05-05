@@ -6,9 +6,11 @@ import asyncio
 import json
 import mimetypes
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 WEB_ROOT = Path(__file__).parent
@@ -21,6 +23,50 @@ STATIC_FILES = {
 
 DemoRunner = Callable[[], Awaitable[dict[str, Any]]]
 
+PRICE_TIMEOUT_SECONDS = 2.5
+_PRICE_CACHE_LOCK = Lock()
+_PRICE_CACHE: dict[str, Any] = {
+    "flr_usd": 0.0076,
+    "xrp_usd": 1.41,
+    "timestamp": datetime.now(UTC).isoformat(),
+    "is_stale": True,
+}
+
+
+async def _read_prices() -> dict[str, Any]:
+    from src.integrations.ftso.client import FtsoClient
+
+    client = FtsoClient(timeout=0.75)
+    prices = await asyncio.wait_for(
+        client.get_prices(["FLR/USD", "XRP/USD"]),
+        timeout=PRICE_TIMEOUT_SECONDS,
+    )
+    by_name = {price.feed_name: price for price in prices}
+    flr = by_name["FLR/USD"]
+    xrp = by_name["XRP/USD"]
+    timestamp = max(flr.timestamp, xrp.timestamp).isoformat()
+    is_stale = flr.is_stale or xrp.is_stale
+    return {
+        "flr_usd": flr.price_usd,
+        "xrp_usd": xrp.price_usd,
+        "timestamp": timestamp,
+        "is_stale": is_stale,
+    }
+
+
+def _get_prices_payload() -> dict[str, Any]:
+    global _PRICE_CACHE
+
+    try:
+        payload = asyncio.run(_read_prices())
+    except Exception:
+        with _PRICE_CACHE_LOCK:
+            return {**_PRICE_CACHE, "is_stale": True}
+
+    with _PRICE_CACHE_LOCK:
+        _PRICE_CACHE = payload
+        return dict(_PRICE_CACHE)
+
 
 def serve(runner: DemoRunner, host: str = "127.0.0.1", port: int = 8088) -> None:
     """Serve the browser UI and demo API until interrupted."""
@@ -31,6 +77,10 @@ def serve(runner: DemoRunner, host: str = "127.0.0.1", port: int = 8088) -> None
         def do_GET(self) -> None:
             if self.path == "/api/health":
                 self._send_json({"ok": True})
+                return
+
+            if self.path == "/prices":
+                self._send_json(_get_prices_payload())
                 return
 
             file_name = STATIC_FILES.get(self.path)

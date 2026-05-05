@@ -1,71 +1,59 @@
 # X Post Draft — 0G APAC Hackathon
 
-## Primary Post (copy-paste ready)
+## Main Post
 
----
+Copy-paste after attaching the demo video. Character count: 275.
 
-Submitting XRPFi Verifiable Copilot to @0G_labs APAC Hackathon 🔗
+```text
+Submitting XRPFi Verifiable Copilot to @0G_labs APAC Hackathon.
 
-Every AI agent decision — prices, reasoning, actions — uploaded to 0G storage and minted as an iNFT. Click the explorer link and prove what the AI did.
+2 agents route XRP toward Flare DeFi, then write every decision to 0G + mint an iNFT receipt judges can verify on Chainscan.
 
-2 agents. 1 verifiable audit trail. XRP → Flare DeFi yield, on-chain receipts.
-
-🔗 GitHub: https://github.com/flareforward/xrpfi-verif-copilot
-🎥 Demo: [ADD VIDEO LINK]
-
-#0GHackathon #BuildOn0G #Flare #Web3AI
-
----
-
-## Backup (shorter)
-
----
-
-Built @0G_labs APAC: XRPFi Verifiable Copilot
-
-AI agents help XRP holders enter Flare DeFi. Every decision stored on 0G + minted as an iNFT — permanent, verifiable, on-chain.
+[VIDEO]
+https://github.com/flareforward/xrpfi-verif-copilot
 
 #0GHackathon #BuildOn0G
+```
 
-🔗 https://github.com/flareforward/xrpfi-verif-copilot
+## Thread Reply Draft
 
----
+```text
+Sponsor proof:
 
-## Thread Option (if you want more reach)
+@0G_labs: ERC-7857 iNFT on 0G mainnet + decision-record proof layer
+@FlareNetworks: FTSO v2 prices, FDC attestation path, FAssets mint flow
+@ensdomains: mint-helper.eth + yield-router.eth identities
+@Uniswap: Trading API v2 quote path
+@gensyn_ai: AXL node-to-node agent handoff
 
-**Tweet 1:**
-Submitting to @0G_labs APAC Hackathon — Track 2: Agentic Trading Arena
+0G tx:
+https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd
 
-XRPFi Verifiable Copilot: AI agents that help XRP holders enter Flare DeFi with a verifiable audit trail on 0G.
+#FlareNetwork #AIAgents #DeFi
+```
 
-#0GHackathon #BuildOn0G 🧵
+## Required HackQuest Tags
 
-**Tweet 2:**
-The problem: XRP holders want yield. The path is complex — bridge, mint FXRP, navigate DeFi venues, manage collateral.
+HackQuest says the public X post must include the project name, a screenshot or short demo clip, hashtags `#0GHackathon` and `#BuildOn0G`, and tags `@0G_labs`, `@0g_CN`, `@0g_Eco`, and `@HackQuest_`.
 
-We built a 2-agent copilot that automates all of it — and stores every decision on @0G_labs decentralized storage.
+Use this shorter compliance version if the submission reviewer requires every tag in the first post:
 
-**Tweet 3:**
-Agent A (mint-helper.eth): FXRP mint via Flare FAssets + FTSO v2 prices + FDC attestation
-Agent B (yield-router.eth): DeFi venue catalog + deterministic rebalance policy + Uniswap swap
+```text
+Submitting XRPFi Verifiable Copilot to @0G_labs @0g_CN @0g_Eco @HackQuest_.
 
-Cross-agent comms via Gensyn AXL topics.
+2 agents route XRP toward Flare DeFi, then mint a 0G iNFT receipt judges can verify on Chainscan.
 
-**Tweet 4:**
-Every decision record → 0G storage → ERC-7857 iNFT
+[VIDEO]
+https://github.com/flareforward/xrpfi-verif-copilot
 
-Judges can click chainscan.0g.ai and see exactly what the AI decided and why. Not a log file. On-chain proof.
+#0GHackathon #BuildOn0G
+```
 
-🔗 https://github.com/flareforward/xrpfi-verif-copilot
-🎥 [ADD VIDEO LINK]
+Character count: 275.
 
-#0GHackathon #BuildOn0G #Flare
+## Operator Steps
 
----
-
-## Instructions
-
-1. Replace `[ADD VIDEO LINK]` with your Loom/YouTube URL after recording
-2. Replace GitHub URL if repo name changes
-3. Post the Primary Post first, then the thread if you want more visibility
-4. Tag @0G_labs, @FlareNetworks in the post for sponsor visibility
+1. Attach the demo video or screenshot before posting.
+2. Use the Main Post for cleaner readability, or the compliance version if the form checker expects all required tags in one post.
+3. Reply with the Sponsor Proof draft.
+4. Paste the public X URL into the HackQuest form.

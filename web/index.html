@@ -8,14 +8,45 @@
   </head>
   <body>
     <main class="shell">
-      <section class="topbar" aria-label="Demo controls">
-        <div>
+      <header class="topbar" aria-label="XRPFi status bar">
+        <strong>XRPFi Verifiable Copilot</strong>
+        <section class="ticker" aria-label="Live FTSO prices">
+          <div>
+            <span>FLR/USD</span>
+            <strong id="ticker-flr">$-.----</strong>
+          </div>
+          <div>
+            <span>XRP/USD</span>
+            <strong id="ticker-xrp">$-.--</strong>
+          </div>
+          <p id="ticker-status">Connecting to FTSO</p>
+        </section>
+      </header>
+
+      <header class="hero" aria-label="XRPFi demo overview">
+        <div class="hero-copy">
           <p class="eyebrow">0G APAC Hackathon 2026</p>
           <h1>XRPFi Verifiable Copilot</h1>
+          <p class="lede">
+            Every AI decision. Permanently verifiable.
+          </p>
+          <div class="badges" aria-label="Demo capabilities">
+            <span>0G Storage</span>
+            <span>iNFT Proof</span>
+            <span>Flare FTSO</span>
+            <span>FDC Attestation</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="command-bar" aria-label="Demo controls">
+        <div>
+          <span>Scenario</span>
+          <strong>XRPL payment verified, FXRP minted, yield route selected</strong>
         </div>
         <button id="run-demo" type="button">
           <span class="button-icon" aria-hidden="true">▶</span>
-          Run demo
+          Run Judge Demo
         </button>
       </section>
 
@@ -34,16 +65,56 @@
 
         <section class="panel" aria-live="polite">
           <div id="empty-state" class="empty-state">
-            <h2>Ready for judge review</h2>
-            <p>
-              Launch the end-to-end XRP to FXRP to Flare DeFi flow and inspect the
-              verifiable decision trail in one place.
-            </p>
+            <section class="flow-card" aria-label="Agent flow diagram">
+              <div class="flow-node active">
+                <span>01</span>
+                <strong>User</strong>
+                <p>XRP holder starts the route</p>
+              </div>
+              <div class="flow-link"></div>
+              <div class="flow-node">
+                <span>02</span>
+                <strong>mint-helper.eth</strong>
+                <p>FDC-backed FXRP path</p>
+              </div>
+              <div class="flow-link"></div>
+              <div class="flow-node">
+                <span>03</span>
+                <strong>Gensyn AXL</strong>
+                <p>Node A to node B handoff</p>
+              </div>
+              <div class="flow-link"></div>
+              <div class="flow-node">
+                <span>04</span>
+                <strong>yield-router.eth</strong>
+                <p>Risk-aware allocation</p>
+              </div>
+              <div class="flow-link"></div>
+              <div class="flow-node">
+                <span>05</span>
+                <strong>0G Storage</strong>
+                <p>Decision bundle persisted</p>
+              </div>
+              <div class="flow-link"></div>
+              <div class="flow-node">
+                <span>06</span>
+                <strong>iNFT</strong>
+                <p>Permanent on-chain receipt</p>
+              </div>
+            </section>
+
+            <section class="ready-copy">
+              <h2>Ready for judge review</h2>
+              <p>
+                Launch the end-to-end XRP to FXRP to Flare DeFi flow and inspect the
+                verifiable decision trail in one place.
+              </p>
+            </section>
           </div>
 
           <div id="loading-state" class="loading-state hidden">
             <div class="spinner" aria-hidden="true"></div>
-            <h2>Running demo flow</h2>
+            <h2>Running agent flow</h2>
             <p>Fetching prices, resolving agents, routing yield, and minting proof.</p>
           </div>
 
@@ -70,17 +141,17 @@
 
             <div class="split">
               <section>
-                <h2>Agents</h2>
+                <h2>Agent Identities</h2>
                 <div id="agents" class="stack"></div>
               </section>
               <section>
-                <h2>FTSO Prices</h2>
+                <h2>FTSO Snapshot</h2>
                 <div id="prices" class="stack"></div>
               </section>
             </div>
 
             <section>
-              <h2>Decision Trail</h2>
+              <h2>Decision Records</h2>
               <div id="decisions" class="decision-list"></div>
             </section>
 

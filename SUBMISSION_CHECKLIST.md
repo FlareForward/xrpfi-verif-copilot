@@ -15,25 +15,32 @@
 | 1 | Open source code with real progress | All source in `src/`, `tests/`, `demo/` | ✅ |
 | 2 | README in English | `README.md` — updated for 0G APAC | ✅ |
 | 3 | At least one 0G component used | `src/integrations/zero_g/` — storage client + iNFT mint | ✅ |
-| 4 | Code quality | 151/151 tests, ruff clean | ✅ |
+| 4 | Code quality | 157/157 tests, ruff clean | ✅ |
 | 5 | X post draft ready | `X_POST_DRAFT.md` | ✅ |
 | 6 | Demo script ready | `DEMO_SCRIPT.md` | ✅ |
 | 7 | Environment vars externalized (no hardcoded mainnet) | `.env` + `src/config.py` | ✅ |
 | 8 | iNFT contract deployable on mainnet | `contracts/deploy.py` — mainnet-ready | ✅ |
+| 9 | Judge-facing handout ready | `docs/JUDGE_HANDOUT.md` | ✅ |
+| 10 | 0G mainnet proof captured | Contract `0x01fE5698a2448d0fc336295df9977796030C79C4`; token ID `1`; tx `0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd` | ✅ |
 
 ---
 
-### ⏸ Operator-required items (action needed)
+### ✅ Completed operator/deploy items
 
 | # | Requirement | What to do | Status |
 |---|-------------|-----------|--------|
-| A | **Fund build wallet** | Send 0.5–1.0 OG mainnet tokens to `0x4d1EB41C0093A14c6c838a1C8fED6f79bc5Dc1AE` via Binance/KuCoin/OKX (ticker: OG). Then tell Claude "GO M" | ⏸ BLOCKING M4 |
-| B | **Deploy iNFT contract** | After wallet funded, run: `cd ~/xrpfi-verif-copilot && uv run python contracts/deploy.py`. Copy the output contract address into `DEPLOYMENT_ADDRESSES.md` | ⏸ Waiting on A |
-| C | **Run end-to-end demo** | After deploy: `uv run python demo/run_demo.py`. Capture the 0G tx hash + iNFT token ID. Add to `DEPLOYMENT_ADDRESSES.md` under "Demo Transaction" | ⏸ Waiting on B |
+| A | Fund build wallet | Completed; 0G mainnet deployment exists | ✅ |
+| B | Deploy iNFT contract | Contract deployed at `0x01fE5698a2448d0fc336295df9977796030C79C4` | ✅ |
+| C | Run end-to-end demo proof | Demo iNFT token ID `1`; mint tx `0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd` | ✅ |
+
+### ⏸ Remaining operator-required items
+
+| # | Requirement | What to do | Status |
+|---|-------------|-----------|--------|
 | D | **Make GitHub repo public** | GitHub → Settings → Danger Zone → Change visibility → Public. Repo path: `~/xrpfi-verif-copilot/` | ⏸ Required before submission |
-| E | **Record demo video** | Follow `DEMO_SCRIPT.md`. Record ~3 min screen capture. Upload to Loom or YouTube (unlisted OK). | ⏸ Required |
-| F | **Post on X** | Use content from `X_POST_DRAFT.md`. Replace `[ADD VIDEO LINK]` with your recording URL. Must include #0GHackathon #BuildOn0G | ⏸ Required |
-| G | **Fill HackQuest submission form** | Go to hackquest.io/hackathons/0G-APAC-Hackathon (registered ✅). Fill in: GitHub URL, demo video URL, X post URL, contract address, project description | ⏸ Final step |
+| E | **Record demo video** | Follow `DEMO_SCRIPT.md`. Record under 3 minutes. Upload to Loom or YouTube as a public or unlisted link. | ⏸ Required |
+| F | **Post on X** | Use `X_POST_DRAFT.md`. Attach the demo video or screenshot. Include #0GHackathon and #BuildOn0G. | ⏸ Required |
+| G | **Fill HackQuest submission form** | Go to `https://www.hackquest.io/en/hackathons/0G-APAC-Hackathon`. Fill in GitHub URL, demo video URL, X post URL, 0G contract address, and project description. | ⏸ Final step |
 
 ---
 
@@ -45,11 +52,13 @@
 
 **GitHub repo:** https://github.com/flareforward/xrpfi-verif-copilot *(make public first)*
 
-**Demo video:** [fill in after recording]
+**Demo video:** Add the Loom or YouTube URL after recording.
 
-**X post URL:** [fill in after posting]
+**X post URL:** Add the public X URL after posting.
 
-**0G contract address:** [fill in from DEPLOYMENT_ADDRESSES.md after deploy]
+**0G contract address:** `0x01fE5698a2448d0fc336295df9977796030C79C4`
+
+**0G explorer proof:** https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd
 
 **Track:** Track 2 — Agentic Trading Arena
 
@@ -57,6 +66,7 @@
 - 0G Storage: every DecisionRecord uploaded via `src/integrations/zero_g/client.py`
 - ERC-7857 iNFT: minted on 0G mainnet via `src/integrations/zero_g/inft.py` + `contracts/XRPFiINFT.sol`
 - Explorer proof: chainscan.0g.ai link in README and DEPLOYMENT_ADDRESSES.md
+- Judge handout: `docs/JUDGE_HANDOUT.md`
 
 **Description:** *(use the content from SUBMISSION.md)*
 
@@ -66,8 +76,8 @@
 
 ```bash
 cd ~/xrpfi-verif-copilot
-uv run pytest tests/ -q        # must show 151 passed
-uv run ruff check src/ tests/ demo/  # must show "All checks passed"
+uv run pytest tests/ -q
+uv run ruff check src/ tests/ demo/ scripts/ web/
 ```
 
 ---
@@ -76,7 +86,7 @@ uv run ruff check src/ tests/ demo/  # must show "All checks passed"
 
 | Criterion | Our Evidence |
 |-----------|-------------|
-| Technical Implementation | 151 tests, real 0G mainnet deploy, 2 live agents, Flare FAssets/FTSO/FDC |
+| Technical Implementation | 157 tests, real 0G mainnet deploy, 2 live agents, Flare FAssets/FTSO/FDC |
 | Product Value & Market Potential | XRP = $35B+ market cap, millions of holders wanting DeFi yield |
 | UX & Demo Quality | DEMO_SCRIPT.md + working `demo/run_demo.py` |
-| Team & Documentation | README, SUBMISSION.md, docs/architecture.md, FEEDBACK.md |
+| Team & Documentation | README, SUBMISSION.md, docs/architecture.md, docs/JUDGE_HANDOUT.md, FEEDBACK.md |
