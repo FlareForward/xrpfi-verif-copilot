@@ -167,8 +167,24 @@ class AxlPublisher:
             # Fallback: in-memory queue
             self._fallback_mode = True
             msg_id = str(uuid.uuid4())
-            payload["messageId"] = msg_id
-            await self._fallback_queue.put(payload)
+
+            if record.model_config.get("frozen"):
+                object.__setattr__(record, "axl_message_id", msg_id)
+            else:
+                record.axl_message_id = msg_id
+
+            fallback_payload = {
+                "messageId": msg_id,
+                "topic": self._topic,
+                "nodeId": "xrpfi-node-1",
+                "publishedAt": datetime.now(UTC).isoformat(),
+                "payload": record.model_dump(mode="json"),
+            }
+            await self._fallback_queue.put(fallback_payload)
+
+            from src.gensyn.node_b.subscriber import get_fallback_queue
+
+            await get_fallback_queue(self._topic).put(fallback_payload)
             logger.warning(
                 "AXL fallback mode active — message queued locally. "
                 "messageId=%s topic=%s record_id=%s",
@@ -176,12 +192,10 @@ class AxlPublisher:
             )
         else:
             self._fallback_mode = False
-
-        # Write message_id back to record (mutates in place)
-        if record.model_config.get("frozen"):
-            object.__setattr__(record, "axl_message_id", msg_id)
-        else:
-            record.axl_message_id = msg_id
+            if record.model_config.get("frozen"):
+                object.__setattr__(record, "axl_message_id", msg_id)
+            else:
+                record.axl_message_id = msg_id
 
         self._last_message_id = msg_id
         return msg_id

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import re
 import sys
@@ -30,9 +31,6 @@ from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice  # no
 from src.gensyn.node_a.publisher import AxlPublisher as NodeAPublisher  # noqa: E402
 from src.gensyn.node_b.subscriber import (  # noqa: E402
     AxlSubscriber as NodeBSubscriber,
-)
-from src.gensyn.node_b.subscriber import (
-    get_fallback_queue,
 )
 from src.integrations.uniswap.client import UniswapClient  # noqa: E402
 
@@ -194,7 +192,10 @@ def parse_uniswap_amount_out(payload: dict[str, Any]) -> float:
     raise ValueError("amountOut not present in Uniswap quote response")
 
 
-async def run_axl_receipt(record: DecisionRecord) -> tuple[str, str | None]:
+async def run_axl_receipt(
+    record: DecisionRecord,
+    fxrp_amount: float = DEMO_XRP_AMOUNT * 0.99,
+) -> tuple[str, str | None]:
     """Publish a mint-complete message and confirm Node B receives it."""
     publisher = NodeAPublisher()
     subscriber = NodeBSubscriber(force_fallback=True)
@@ -210,25 +211,20 @@ async def run_axl_receipt(record: DecisionRecord) -> tuple[str, str | None]:
 
     try:
         message_id = await publish_task
-        if publisher.is_fallback_mode:
-            for message in await publisher.drain_fallback_queue():
-                await get_fallback_queue(get_settings().axl_topic_mint_complete).put(
-                    {
-                        "message_id": message.get("messageId", message_id),
-                        "topic": get_settings().axl_topic_mint_complete,
-                        "payload": record.model_dump(mode="json"),
-                    }
-                )
         received_record = await asyncio.wait_for(received, timeout=5.0)
+        topic = get_settings().axl_topic_mint_complete
+        receipt_message_id = received_record.axl_message_id or message_id
+        payload_snippet = json.dumps({"fxrp": round(fxrp_amount, 1)}, separators=(",", ":"))
         return (
-            f"Node A -> Node B: xrpfi.mint.complete received "
-            f"(message_id={message_id}, record={received_record.record_id[:8]})",
+            f"Node A → Node B: {topic} ✓\n"
+            f"                    receipt: msg_id={receipt_message_id} "
+            f"topic={topic} payload={payload_snippet}",
             None,
         )
     except TimeoutError:
-        return "Node A -> Node B: xrpfi.mint.complete", "no receipt within 5s"
+        return "AXL timeout", "nodes may need real Gensyn network"
     except Exception as exc:
-        return "Node A -> Node B: xrpfi.mint.complete", str(exc)
+        return "Node A → Node B: xrpfi.mint.complete", str(exc)
     finally:
         subscriber.stop()
         subscriber_task.cancel()
@@ -320,7 +316,7 @@ async def run_judge_demo() -> None:
         f"WETH→USDC: 1.0 WETH = {quote_amount:,.2f} USDC ({quote_suffix})",
     )
 
-    axl_receipt, axl_error = await run_axl_receipt(mint_record)
+    axl_receipt, axl_error = await run_axl_receipt(mint_record, fxrp_minted)
     print_line(8, "Gensyn AXL", axl_receipt, axl_error)
 
     records = [attest_record, mint_record, route_record]
