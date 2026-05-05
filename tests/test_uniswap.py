@@ -107,7 +107,8 @@ class TestUniswapClient:
         assert captured_request is not None
         params = dict(captured_request.url.params)
         assert params["type"] == "EXACT_INPUT"
-        assert params["protocols"] == "v3"
+        assert params["tokenInChainId"] == "1"
+        assert params["tokenOutChainId"] == "1"
         assert "tokenInAddress" in params
         assert "tokenOutAddress" in params
         assert "amount" in params

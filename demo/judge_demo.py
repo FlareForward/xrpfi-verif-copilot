@@ -11,7 +11,6 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-import httpx
 import structlog
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -35,6 +34,7 @@ from src.gensyn.node_b.subscriber import (  # noqa: E402
 from src.gensyn.node_b.subscriber import (
     get_fallback_queue,
 )
+from src.integrations.uniswap.client import UniswapClient  # noqa: E402
 
 GITHUB_URL = "https://github.com/FlareForward/xrpfi-verif-copilot"
 ZERO_G_EXPLORER = "https://chainscan.0g.ai"
@@ -42,8 +42,6 @@ COORD_DOC = Path.home() / "codex-coord" / "xrpfi-storage-demo-20260505.md"
 INFT_TOKEN_ID = "1"
 INFT_TX = "0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd"
 UNISWAP_FIXTURE_USDC = 2341.22
-WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
 
 async def safe_step[T](
@@ -162,39 +160,18 @@ def fallback_route_record(prices: list[FtsoPrice], fxrp_amount: float) -> Decisi
     )
 
 
-async def fetch_uniswap_quote() -> tuple[float, str | None]:
+async def fetch_uniswap_quote() -> tuple[float, bool]:
     """Fetch a real Uniswap quote, with a fixture fallback for auth/network gaps."""
-    settings = get_settings()
-    params = {
-        "tokenIn": WETH,
-        "tokenOut": USDC,
-        "amount": "1000000000000000000",
-        "type": "exactIn",
-        "chainId": "1",
-    }
-    headers = {"Accept": "application/json"}
-    if settings.uniswap_api_key:
-        headers["x-api-key"] = settings.uniswap_api_key
-
+    client = UniswapClient()
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            response = await client.get(
-                "https://api.uniswap.org/v2/quote",
-                params=params,
-                headers=headers,
-            )
-        if response.status_code == 403:
-            return UNISWAP_FIXTURE_USDC, "API key not set - fixture"
-        response.raise_for_status()
-        payload = response.json()
+        payload = await client.get_quote("WETH", "USDC", 1.0, chain_id=1)
         amount_out = parse_uniswap_amount_out(payload)
-        return amount_out, None
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 403:
-            return UNISWAP_FIXTURE_USDC, "API key not set - fixture"
-        return UNISWAP_FIXTURE_USDC, f"Uniswap HTTP {exc.response.status_code} - fixture"
+        return amount_out, True
     except Exception as exc:
-        return UNISWAP_FIXTURE_USDC, f"Uniswap unavailable: {exc} - fixture"
+        logging.getLogger(__name__).warning("Uniswap live quote unavailable: %s", exc)
+        return UNISWAP_FIXTURE_USDC, False
+    finally:
+        await client.close()
 
 
 def parse_uniswap_amount_out(payload: dict[str, Any]) -> float:
@@ -335,12 +312,12 @@ async def run_judge_demo() -> None:
     )
     print_line(6, "Yield routed", "60% SparkDEX / 40% Kinetic", route_note)
 
-    quote_amount, quote_note = await fetch_uniswap_quote()
+    quote_amount, is_live_quote = await fetch_uniswap_quote()
+    quote_suffix = "live" if is_live_quote else "fixture — set UNISWAP_API_KEY"
     print_line(
         7,
         "Uniswap quote",
-        f"WETH->USDC: 1.0 WETH = {quote_amount:,.2f} USDC",
-        quote_note,
+        f"WETH→USDC: 1.0 WETH = {quote_amount:,.2f} USDC ({quote_suffix})",
     )
 
     axl_receipt, axl_error = await run_axl_receipt(mint_record)

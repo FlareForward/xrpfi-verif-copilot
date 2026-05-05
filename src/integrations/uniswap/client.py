@@ -178,10 +178,10 @@ class UniswapClient:
         params: dict[str, Any] = {
             "tokenInAddress": addr_in,
             "tokenOutAddress": addr_out,
+            "tokenInChainId": chain_id,
+            "tokenOutChainId": chain_id,
             "amount": amount_wei,
             "type": "EXACT_INPUT",
-            "protocols": "v3",
-            "chainId": chain_id,
         }
 
         logger.debug("UniswapClient.get_quote params=%s", params)

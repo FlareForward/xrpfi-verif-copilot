@@ -70,6 +70,11 @@ from `https://api.uniswap.org/v2`.
 10. **No sandbox/mock endpoint**: Had to build our own respx mock for CI.
     *Fix: provide a public sandbox endpoint or documented fixture set for offline testing.*
 
+11. **Access-denied response is hard to act on**: The live `/v2/quote` probe returned
+    `409 {"errorCode":"ACCESS_DENIED"}` both without auth and with a local `x-api-key`,
+    with no message explaining whether the key, account, endpoint, or request shape was
+    rejected. *Fix: include a human-readable remediation hint and use 401/403 for auth failures.*
+
 #### Missing features (wishlist)
 - **Cross-chain quote**: given a Flare DeFi route, return the optimal bridge + swap path
   automatically rather than requiring builders to compose it manually
