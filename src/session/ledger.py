@@ -18,14 +18,18 @@ def save_session(
     records: Sequence[Any],
     *,
     path: Path | None = None,
+    started_at: str | None = None,
 ) -> dict[str, Any]:
     """Append one completed judge demo run to the session ledger."""
     ledger_path = path or DEFAULT_LEDGER_PATH
     sessions = load_sessions(path=ledger_path)
     serialized_records = [_serialize_record(record) for record in records]
+    finished_at = datetime.now(UTC).isoformat()
     session: dict[str, Any] = {
         "session_id": _new_session_id(),
-        "timestamp": datetime.now(UTC).isoformat(),
+        "timestamp": finished_at,
+        "started_at": started_at or finished_at,
+        "finished_at": finished_at,
         "steps": list(steps),
         "records": serialized_records,
     }

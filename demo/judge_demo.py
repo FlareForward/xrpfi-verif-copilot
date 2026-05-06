@@ -238,6 +238,7 @@ async def run_axl_receipt(
 async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str, Any]:
     """Run the full judge demo flow and print numbered proof lines."""
     suppress_demo_logging()
+    started_at = datetime_now_iso()
     print_header()
     steps: list[dict[str, Any]] = []
 
@@ -389,7 +390,7 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
     )
 
     print_footer(inft_url)
-    session = save_session(steps, records)
+    session = save_session(steps, records, started_at=started_at)
     return {
         "agents": [
             {"ens": "mint-helper.eth", "address": mint_helper},
@@ -475,6 +476,13 @@ def main(step_callback: StepCallback | None = None) -> dict[str, Any] | None:
     except Exception as exc:
         print(f"\n⚠ Judge demo failed safely: {exc}")
     return None
+
+
+def datetime_now_iso() -> str:
+    """Return an ISO UTC timestamp for session duration tracking."""
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).isoformat()
 
 
 if __name__ == "__main__":

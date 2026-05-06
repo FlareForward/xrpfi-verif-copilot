@@ -11,8 +11,9 @@ const stepStatus = document.querySelector("#step-status");
 const tickerFlr = document.querySelector("#ticker-flr");
 const tickerXrp = document.querySelector("#ticker-xrp");
 const tickerStatus = document.querySelector("#ticker-status");
-const pastRuns = document.querySelector("#past-runs");
-const pastRunsCount = document.querySelector("#past-runs-count");
+const gallery = document.querySelector("#gallery");
+const galleryCount = document.querySelector("#gallery-count");
+const galleryRefresh = document.querySelector("#gallery-refresh");
 let eventSource = null;
 
 const escapeHtml = (value) =>
@@ -50,6 +51,30 @@ const formatSessionTimestamp = (timestamp) => {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+const truncateHash = (value) => {
+  if (!value) {
+    return "unavailable";
+  }
+  const text = String(value);
+  if (text.length <= 18) {
+    return text;
+  }
+  return `${text.slice(0, 10)}...${text.slice(-6)}`;
+};
+
+const formatDuration = (seconds) => {
+  const numericSeconds = Number(seconds);
+  if (!Number.isFinite(numericSeconds) || numericSeconds < 0) {
+    return "Duration pending";
+  }
+  if (numericSeconds < 60) {
+    return `${Math.round(numericSeconds)}s`;
+  }
+  const minutes = Math.floor(numericSeconds / 60);
+  const remainder = Math.round(numericSeconds % 60);
+  return `${minutes}m ${remainder}s`;
 };
 
 const setState = (state) => {
@@ -124,18 +149,6 @@ const proofBadge = (record) => {
   return `<span class="badge-link badge-link-muted">Storage pending</span>`;
 };
 
-const sessionProofBadge = (session) => {
-  const tokenId = session.inft?.token_id;
-  const explorer = session.inft?.explorer_url;
-  if (tokenId && explorer) {
-    return `<a class="badge-link badge-link-success" href="${escapeHtml(explorer)}" target="_blank" rel="noreferrer">iNFT Token ${escapeHtml(tokenId)} ↗</a>`;
-  }
-  if (tokenId) {
-    return `<span class="badge-link badge-link-success">iNFT Token ${escapeHtml(tokenId)}</span>`;
-  }
-  return `<span class="badge-link badge-link-muted">Proof pending</span>`;
-};
-
 const priceTags = (prices = []) =>
   prices
     .map(
@@ -183,20 +196,55 @@ const decision = (record, index) => `
   </details>
 `;
 
-const pastRun = (session) => {
-  const stepsComplete = Array.isArray(session.steps) ? session.steps.length : 0;
+const galleryProof = (session) => {
+  if (session.storage_is_real && session.inft_token_id && session.inft_explorer_url) {
+    return `<a class="gallery-proof-link" href="${escapeHtml(session.inft_explorer_url)}" target="_blank" rel="noreferrer">iNFT Token ${escapeHtml(session.inft_token_id)} ↗</a>`;
+  }
+  if (session.storage_is_real && session.inft_token_id) {
+    return `<span class="gallery-proof-link">iNFT Token ${escapeHtml(session.inft_token_id)}</span>`;
+  }
+  return `<span class="gallery-fallback">⚠ storage fallback</span>`;
+};
+
+const galleryCard = (session) => {
+  const completed = Number.isFinite(Number(session.steps_completed))
+    ? Number(session.steps_completed)
+    : 0;
+  const total = Number.isFinite(Number(session.steps_total)) ? Number(session.steps_total) : 10;
+  const hash = session.storage_tx_hash || "";
+  const sessionId = session.session_id || "session unavailable";
   return `
-    <details class="decision" open>
-      <summary>
-        <span>
-          <strong>${escapeHtml(formatSessionTimestamp(session.timestamp))}</strong>
-          <small>${escapeHtml(stepsComplete)}/10 steps</small>
-        </span>
-        ${sessionProofBadge(session)}
-      </summary>
-    </details>
+    <article class="gallery-card">
+      <div class="gallery-card-top">
+        <div>
+          <time datetime="${escapeHtml(session.timestamp || "")}">${escapeHtml(
+            formatSessionTimestamp(session.timestamp),
+          )}</time>
+          <small>${escapeHtml(sessionId)}</small>
+        </div>
+        <span class="gallery-steps">${escapeHtml(completed)}/${escapeHtml(total)} steps</span>
+      </div>
+      <div class="gallery-proof">
+        ${galleryProof(session)}
+      </div>
+      <div class="gallery-duration">
+        <span>Duration</span>
+        <strong>${escapeHtml(formatDuration(session.duration_seconds))}</strong>
+      </div>
+      <div class="gallery-hash">
+        <span>Storage tx</span>
+        <button type="button" data-copy-hash="${escapeHtml(hash)}" ${
+          hash ? "" : "disabled"
+        }>${escapeHtml(truncateHash(hash))}</button>
+      </div>
+    </article>
   `;
 };
+
+const sortGallerySessions = (sessions) =>
+  [...sessions]
+    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+    .slice(0, 10);
 
 const renderResult = (result) => {
   document.querySelector("#xrp-amount").textContent = `${formatNumber(result.xrp_amount)} XRP`;
@@ -248,22 +296,47 @@ const refreshTicker = async () => {
   }
 };
 
-const loadPastRuns = async () => {
+const renderGalleryEmpty = () => {
+  galleryCount.textContent = "0 saved";
+  gallery.innerHTML = `
+    <article class="gallery-card gallery-empty">
+      <p>No sessions yet — run the judge demo to generate your first iNFT</p>
+    </article>
+  `;
+};
+
+const renderGalleryError = () => {
+  galleryCount.textContent = "Unavailable";
+  gallery.innerHTML = `
+    <article class="gallery-card gallery-error">
+      <p>Gallery unavailable</p>
+      <button type="button" data-gallery-retry>Retry</button>
+    </article>
+  `;
+};
+
+const loadGallery = async () => {
+  galleryRefresh.disabled = true;
+  galleryCount.textContent = "Refreshing";
   try {
-    const response = await fetch("/sessions", { cache: "no-store" });
+    const response = await fetch("/gallery", { cache: "no-store" });
     const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error("Session history unavailable.");
+    if (!response.ok || !Array.isArray(payload)) {
+      throw new Error("Gallery unavailable.");
     }
 
-    const sessions = Array.isArray(payload.sessions) ? payload.sessions : [];
-    pastRunsCount.textContent = `${sessions.length} saved`;
-    pastRuns.innerHTML = sessions.length
-      ? sessions.map((session) => pastRun(session)).join("")
-      : `<p class="empty-state">No runs yet — click Run Judge Demo above</p>`;
+    const sessions = sortGallerySessions(payload);
+    if (!sessions.length) {
+      renderGalleryEmpty();
+      return;
+    }
+
+    galleryCount.textContent = `${sessions.length} saved`;
+    gallery.innerHTML = sessions.map((session) => galleryCard(session)).join("");
   } catch (error) {
-    pastRunsCount.textContent = "Unavailable";
-    pastRuns.innerHTML = `<p class="empty-state">Past runs unavailable</p>`;
+    renderGalleryError();
+  } finally {
+    galleryRefresh.disabled = false;
   }
 };
 
@@ -283,7 +356,7 @@ const openDemoStream = () => {
       stepStatus.textContent = "Complete";
       setState("result");
       refreshTicker();
-      loadPastRuns();
+      loadGallery();
       return;
     }
     if (event.step === "error") {
@@ -335,7 +408,37 @@ runButton.addEventListener("click", async () => {
   }
 });
 
+galleryRefresh.addEventListener("click", () => {
+  loadGallery();
+});
+
+gallery.addEventListener("click", async (event) => {
+  const retryButton = event.target.closest("[data-gallery-retry]");
+  if (retryButton) {
+    loadGallery();
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-copy-hash]");
+  if (!copyButton || !copyButton.dataset.copyHash) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(copyButton.dataset.copyHash);
+    copyButton.textContent = "Copied";
+    window.setTimeout(() => {
+      copyButton.textContent = truncateHash(copyButton.dataset.copyHash);
+    }, 1200);
+  } catch (error) {
+    copyButton.textContent = "Copy failed";
+    window.setTimeout(() => {
+      copyButton.textContent = truncateHash(copyButton.dataset.copyHash);
+    }, 1200);
+  }
+});
+
 resetLiveSteps();
 refreshTicker();
-loadPastRuns();
+loadGallery();
 setInterval(refreshTicker, 30000);

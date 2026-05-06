@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import json
 import mimetypes
+import re
 from asyncio import iscoroutine
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -36,6 +37,83 @@ _PRICE_CACHE: dict[str, Any] = {
     "timestamp": datetime.now(UTC).isoformat(),
     "is_stale": True,
 }
+
+
+def _build_gallery_entries(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return UI-ready iNFT session metadata, newest first."""
+    return [_gallery_entry(session) for session in sessions[:10]]
+
+
+def _gallery_entry(session: dict[str, Any]) -> dict[str, Any]:
+    steps = _as_dict_list(session.get("steps"))
+    records = _as_dict_list(session.get("records"))
+    storage_tx_hash = _extract_storage_tx_hash(records, steps)
+    inft = session.get("inft") if isinstance(session.get("inft"), dict) else {}
+
+    return {
+        "session_id": session.get("session_id"),
+        "timestamp": session.get("timestamp"),
+        "steps_completed": sum(1 for step in steps if step.get("status") == "ok"),
+        "steps_total": 10,
+        "inft_token_id": inft.get("token_id"),
+        "inft_explorer_url": inft.get("explorer_url"),
+        "storage_tx_hash": storage_tx_hash,
+        "storage_is_real": bool(storage_tx_hash)
+        and not str(storage_tx_hash).startswith("0xlocal_proof_"),
+        "duration_seconds": _duration_seconds(session, steps),
+    }
+
+
+def _as_dict_list(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _extract_storage_tx_hash(
+    records: list[dict[str, Any]],
+    steps: list[dict[str, Any]],
+) -> str | None:
+    for record in records:
+        zero_g = record.get("zero_g")
+        if isinstance(zero_g, dict) and zero_g.get("storage_tx_hash"):
+            return str(zero_g["storage_tx_hash"])
+
+    for step in steps:
+        if step.get("step") != 9 and step.get("label") != "0G storage":
+            continue
+        value = str(step.get("value", ""))
+        match = re.search(r"tx=([^\s]+)", value)
+        if match:
+            tx_hash = match.group(1)
+            return "0xlocal_proof_local-proof" if tx_hash == "local-proof" else tx_hash
+    return None
+
+
+def _duration_seconds(session: dict[str, Any], steps: list[dict[str, Any]]) -> int | None:
+    started_at = _parse_datetime(session.get("started_at"))
+    finished_at = _parse_datetime(session.get("finished_at"))
+    if started_at and finished_at:
+        return max(0, round((finished_at - started_at).total_seconds()))
+
+    step_times = [_parse_datetime(step.get("timestamp")) for step in steps]
+    known_step_times = [timestamp for timestamp in step_times if timestamp is not None]
+    if len(known_step_times) >= 2:
+        return max(0, round((known_step_times[-1] - known_step_times[0]).total_seconds()))
+    return None
+
+
+def _parse_datetime(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed
 
 
 async def _read_prices() -> dict[str, Any]:
@@ -155,6 +233,10 @@ def serve(runner: DemoRunner, host: str = "127.0.0.1", port: int = 8088) -> None
                 self._send_json({"ok": True, "sessions": load_sessions()})
                 return
 
+            if self.path == "/gallery":
+                self._send_json(_build_gallery_entries(load_sessions()))
+                return
+
             if self.path == "/status":
                 self._send_json(get_run_state())
                 return
@@ -200,7 +282,7 @@ def serve(runner: DemoRunner, host: str = "127.0.0.1", port: int = 8088) -> None
             if include_body:
                 self.wfile.write(body)
 
-        def _send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+        def _send_json(self, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
             body = json.dumps(payload, indent=2).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json")

@@ -8,6 +8,9 @@
   --line: rgba(255, 255, 255, 0.12);
   --accent: #6366f1;
   --accent-strong: #8b5cf6;
+  --gallery-card: #141428;
+  --gallery-success: #10b981;
+  --gallery-warning: #f59e0b;
   --cyan: #22d3ee;
   --green: #34d399;
   --warning: #fbbf24;
@@ -305,6 +308,45 @@ h2 {
   font-weight: 900;
 }
 
+.gallery-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-actions span {
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.gallery-actions button,
+.gallery-error button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(99, 102, 241, 0.55);
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.16);
+  color: #e6e8ff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.gallery-actions button:hover,
+.gallery-error button:hover {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.gallery-actions button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .step-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -546,6 +588,170 @@ h2 {
   gap: 10px;
 }
 
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gallery-card {
+  display: grid;
+  gap: 14px;
+  min-height: 164px;
+  padding: 16px;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 8px;
+  background: var(--gallery-card);
+}
+
+.gallery-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gallery-card-top > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.gallery-card time {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.gallery-card small {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.gallery-steps {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #a7f3d0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.gallery-proof-link,
+.gallery-fallback {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.gallery-proof-link {
+  background: rgba(16, 185, 129, 0.12);
+  color: #bbf7d0;
+}
+
+.gallery-proof-link:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.gallery-fallback {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fde68a;
+}
+
+.gallery-duration {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gallery-duration span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gallery-duration strong {
+  color: #e0f2fe;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.gallery-hash {
+  display: grid;
+  gap: 7px;
+}
+
+.gallery-hash span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gallery-hash button {
+  justify-self: start;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #dfe3ff;
+  cursor: copy;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.gallery-hash button:hover {
+  border-color: rgba(99, 102, 241, 0.52);
+}
+
+.gallery-hash button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.gallery-empty,
+.gallery-error {
+  grid-column: 1 / -1;
+  align-content: center;
+  min-height: 120px;
+}
+
+.gallery-empty p,
+.gallery-error p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.gallery-error {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.gallery-error button {
+  justify-self: start;
+}
+
 .item {
   padding: 16px;
 }
@@ -756,6 +962,7 @@ h2 {
   .ticker,
   .flow-card,
   .step-list,
+  .gallery-grid,
   .decision dl {
     grid-template-columns: 1fr;
   }

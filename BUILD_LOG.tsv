@@ -12,3 +12,4 @@ date	surface	phase	start	end	status	commit	notes
 2026-05-05	LANE-A	T03-T04 session history ledger	19:11	19:17	PASS	5b2da94	Session ledger persists judge runs to ~/.xrpfi/sessions.json; GET /sessions; Past Runs UI; 160 tests; ruff clean; integrated shared checkout
 2026-05-05	LANE-B	T05-T06 docker makefile	19:11	19:18	PASS	5b2da94	docker-compose.yml; Makefile targets; README Docker section; env audit; YAML valid; Makefile syntax OK; integrated shared checkout
 2026-05-05	ORCH	T01-T02 SSE stream ledger	19:09	19:18	PASS	5b2da94	SSE /stream; async /api/run; /status compatibility; 10 live UI steps; judge_demo step_callback; SSE smoke PASS; 160 tests; ruff clean
+2026-05-06	ORCH	T01-T03 iNFT gallery cleanup	00:44	00:56	PASS	2584407	Session started_at/finished_at; /gallery endpoint; iNFT gallery cards with duration/storage proof; 163 tests; ruff clean; mypy src strict clean; server bind blocked by sandbox
