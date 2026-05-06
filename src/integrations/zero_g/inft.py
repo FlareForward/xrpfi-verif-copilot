@@ -10,6 +10,7 @@ import json
 import logging
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel
 from web3 import Web3
@@ -24,7 +25,7 @@ ZERO_G_EXPLORER = os.environ.get("ZERO_G_EXPLORER", "https://chainscan.0g.ai")
 ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
 
 # ERC-7857 iNFT ABI — minimal interface for mint + tokenURI
-INFT_ABI = [
+INFT_ABI: list[dict[str, Any]] = [
     {
         "inputs": [
             {"internalType": "address", "name": "to", "type": "address"},
@@ -87,7 +88,7 @@ class INFTMinter:
             checksum = self.w3.to_checksum_address(contract_address)
             self._contract = self.w3.eth.contract(address=checksum, abi=INFT_ABI)
 
-    def _build_metadata(self, records: list[DecisionRecord]) -> dict:
+    def _build_metadata(self, records: list[DecisionRecord]) -> dict[str, Any]:
         """Build the iNFT metadata payload from a list of decision records."""
         return {
             "name": f"XRPFi Decision Log — {len(records)} actions",
@@ -105,7 +106,7 @@ class INFTMinter:
             "fdc_proofs_used": sum(1 for r in records if r.fdc_proof is not None),
         }
 
-    def _compute_metadata_hash(self, metadata: dict) -> bytes:
+    def _compute_metadata_hash(self, metadata: dict[str, Any]) -> bytes:
         """keccak256 of canonical JSON metadata."""
         canonical = json.dumps(metadata, sort_keys=True, ensure_ascii=False).encode("utf-8")
         return bytes(self.w3.keccak(canonical))
@@ -146,10 +147,10 @@ class INFTMinter:
             record.zero_g.inft_explorer_url = result.explorer_url
 
         logger.info(
-            "iNFT minted",
-            token_id=result.token_id,
-            records=len(records),
-            explorer=result.explorer_url,
+            "iNFT minted token_id=%s records=%d explorer=%s",
+            result.token_id,
+            len(records),
+            result.explorer_url,
         )
         return result
 

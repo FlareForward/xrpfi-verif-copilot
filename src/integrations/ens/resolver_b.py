@@ -9,7 +9,7 @@ Pattern: mirrors Lane A's resolver.py (for mint-helper.eth) but scoped to yield-
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,8 @@ class YieldRouterEnsResolver:
 
         # ENS resolution via web3.py ns module
         try:
-            address = await w3.ens.address(ENS_NAME)  # type: ignore[attr-defined]
+            ens = cast(Any, w3.ens)
+            address = await ens.address(ENS_NAME)
         except AttributeError:
             # Older web3.py versions use different API
             address = await w3.eth.resolve_address(ENS_NAME)  # type: ignore[attr-defined]

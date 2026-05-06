@@ -7,7 +7,7 @@ import re
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 DEFAULT_LEDGER_PATH = Path.home() / ".xrpfi" / "sessions.json"
@@ -22,13 +22,14 @@ def save_session(
     """Append one completed judge demo run to the session ledger."""
     ledger_path = path or DEFAULT_LEDGER_PATH
     sessions = load_sessions(path=ledger_path)
-    session = {
+    serialized_records = [_serialize_record(record) for record in records]
+    session: dict[str, Any] = {
         "session_id": _new_session_id(),
         "timestamp": datetime.now(UTC).isoformat(),
         "steps": list(steps),
-        "records": [_serialize_record(record) for record in records],
+        "records": serialized_records,
     }
-    session["inft"] = _extract_inft(session["steps"], session["records"])
+    session["inft"] = _extract_inft(steps, serialized_records)
     sessions.insert(0, session)
     _write_sessions(ledger_path, sessions)
     return session
@@ -48,7 +49,7 @@ def load_sessions(*, path: Path | None = None) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
 
-    return [session for session in raw if isinstance(session, dict)]
+    return [cast(dict[str, Any], session) for session in raw if isinstance(session, dict)]
 
 
 def _write_sessions(path: Path, sessions: list[dict[str, Any]]) -> None:
@@ -66,9 +67,9 @@ def _new_session_id() -> str:
 def _serialize_record(record: object) -> dict[str, Any]:
     if hasattr(record, "model_dump"):
         dumped = record.model_dump(mode="json")
-        return dict(dumped) if isinstance(dumped, dict) else {"value": dumped}
+        return cast(dict[str, Any], dict(dumped)) if isinstance(dumped, dict) else {"value": dumped}
     if isinstance(record, dict):
-        return record
+        return cast(dict[str, Any], record)
     return {"value": str(record)}
 
 

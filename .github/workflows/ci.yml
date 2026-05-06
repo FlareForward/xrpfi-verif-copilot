@@ -20,5 +20,7 @@ jobs:
         run: uv pip install -e ".[dev]" --system
       - name: Ruff lint
         run: ruff check src/ tests/ demo/ scripts/
+      - name: Type check
+        run: uv run mypy --strict src/
       - name: Pytest
         run: pytest tests/ -q

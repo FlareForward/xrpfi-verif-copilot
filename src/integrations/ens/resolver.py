@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+from typing import Any, cast
 
 import httpx
 
@@ -114,10 +115,10 @@ class EnsResolver:
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             resp = await http.post(self._rpc_url, json=payload)
             resp.raise_for_status()
-            body = resp.json()
+            body = cast(dict[str, Any], resp.json())
             if "error" in body:
                 raise RuntimeError(f"eth_call error: {body['error']}")
-            return body["result"]
+            return str(body["result"])
 
     async def _resolve_via_web3(self, name: str) -> str | None:
         """Attempt ENS resolution via web3.py ENS module."""
@@ -131,8 +132,9 @@ class EnsResolver:
             if ens is None:
                 return None
             maybe_address = ens.address(name)
-            address: str | None = (
-                await maybe_address if inspect.isawaitable(maybe_address) else maybe_address
+            address = cast(
+                str | None,
+                await maybe_address if inspect.isawaitable(maybe_address) else maybe_address,
             )
             return address if address and address != ZERO_ADDRESS else None
         except Exception as exc:

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from src.contracts.decision_log import DecisionRecord, FdcProof, FtsoPrice
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Google ADK import — real SDK preferred, lightweight stub as fallback
 # ---------------------------------------------------------------------------
 try:
-    from google.adk.agents import Agent  # type: ignore[import]
+    from google.adk.agents import Agent
 
     _ADK_AVAILABLE = True
     logger.info("google-adk SDK loaded — using real Agent class")
@@ -121,7 +121,7 @@ async def _generate_live_reasoning(
         from src.config import get_settings
 
         model = os.getenv("GEMINI_MODEL", get_settings().gemini_model)
-        from google import genai  # type: ignore[import-not-found]
+        from google import genai
 
         client = genai.Client(api_key=api_key)
         prompt = (
@@ -132,7 +132,7 @@ async def _generate_live_reasoning(
             f"Context:\n{decision_context}\n\n"
             f"Offline fallback reasoning:\n{fallback_reasoning}"
         )
-        response = await _call_gemini_generate_content(client, model, prompt)
+        response = await _call_gemini_generate_content(cast(_GeminiClient, client), model, prompt)
         text = getattr(response, "text", "") or ""
         if text.strip():
             return text.strip()

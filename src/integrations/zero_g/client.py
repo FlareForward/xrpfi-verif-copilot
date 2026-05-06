@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import httpx
 from pydantic import BaseModel
@@ -109,10 +110,10 @@ class ZeroGClient:
         record.zero_g.storage_tx_hash = result.tx_hash
         record.zero_g.persisted_at = result.stored_at
         logger.info(
-            "DecisionRecord persisted to 0G",
-            record_id=record.record_id,
-            tx_hash=result.tx_hash,
-            explorer=result.explorer_url,
+            "DecisionRecord persisted to 0G record_id=%s tx_hash=%s explorer=%s",
+            record.record_id,
+            result.tx_hash,
+            result.explorer_url,
         )
         return result
 
@@ -124,6 +125,8 @@ class ZeroGClient:
         )
         tmp_path: str | None = None
         try:
+            if self.private_key is None:
+                raise RuntimeError("0G private key is required for SDK upload")
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="wb") as tmp:
                 tmp.write(data)
                 tmp_path = tmp.name
@@ -169,7 +172,7 @@ class ZeroGClient:
             if tmp_path:
                 Path(tmp_path).unlink(missing_ok=True)
 
-    def _parse_helper_output(self, stdout: str) -> dict[str, object]:
+    def _parse_helper_output(self, stdout: str) -> dict[str, Any]:
         """Parse the helper's JSON even when the SDK prints progress lines first."""
         for line in reversed([item.strip() for item in stdout.splitlines() if item.strip()]):
             try:
@@ -177,7 +180,7 @@ class ZeroGClient:
             except json.JSONDecodeError:
                 continue
             if isinstance(parsed, dict):
-                return parsed
+                return cast(dict[str, Any], parsed)
         raise RuntimeError(f"0G helper did not emit JSON: {stdout[-500:]}")
 
     async def _upload_via_http(self, data: bytes, root_hash: str) -> StorageResult:
@@ -191,8 +194,8 @@ class ZeroGClient:
                     headers={"Content-Type": "application/octet-stream"},
                 )
                 if resp.status_code in (200, 201):
-                    body = resp.json()
-                    tx_hash = body.get("tx_hash", root_hash)
+                    body = cast(dict[str, Any], resp.json())
+                    tx_hash = str(body.get("tx_hash", root_hash))
                     logger.info("0G HTTP upload success: %s", tx_hash)
                     return StorageResult(
                         tx_hash=tx_hash,

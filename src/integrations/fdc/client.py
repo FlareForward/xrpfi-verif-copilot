@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -78,7 +78,7 @@ class FdcClient:
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             resp = await http.post(url, json=body)
             resp.raise_for_status()
-            return resp.json()
+            return cast(dict[str, Any], resp.json())
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8))
     async def _get_relay(self, path: str) -> dict[str, Any]:
@@ -87,7 +87,7 @@ class FdcClient:
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             resp = await http.get(url)
             resp.raise_for_status()
-            return resp.json()
+            return cast(dict[str, Any], resp.json())
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8))
     async def _eth_call(self, to: str, data: str) -> str:
@@ -101,10 +101,10 @@ class FdcClient:
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             resp = await http.post(self._rpc_url, json=payload)
             resp.raise_for_status()
-            body = resp.json()
+            body = cast(dict[str, Any], resp.json())
             if "error" in body:
                 raise RuntimeError(f"eth_call error: {body['error']}")
-            return body["result"]
+            return str(body["result"])
 
     def _derive_proof_hash(self, xrp_tx_hash: str, round_id: int) -> str:
         """Derive a deterministic proof hash from the tx hash + round_id."""

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -92,10 +92,10 @@ class FtsoClient:
         async with httpx.AsyncClient(timeout=self._timeout) as http:
             resp = await http.post(self._rpc_url, json=payload)
             resp.raise_for_status()
-            body = resp.json()
+            body = cast(dict[str, Any], resp.json())
             if "error" in body:
                 raise RuntimeError(f"eth_call error: {body['error']}")
-            return body["result"]
+            return str(body["result"])
 
     def _encode_get_contract_address(self, name: str) -> str:
         """Encode getContractAddressByName(name) calldata."""
