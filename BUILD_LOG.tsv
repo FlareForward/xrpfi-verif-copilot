@@ -9,3 +9,6 @@ date	surface	phase	start	end	status	commit	notes
 2026-05-05	ORCH	T01-T02 CI+README	16:35	16:49	PASS	679c45f	CI workflow added; README badges and 3-command quickstart; docs/screenshots placeholder; 157 tests; ruff clean; push blocked DNS github.com
 2026-05-05	LANE-A	T03-T04 web UI polish	16:53	17:00	PASS	b758f15	Dark UI; /prices endpoint with stale cache fallback; live ticker; agent flow; decision cards; server bind blocked by sandbox; direct /prices payload OK; 157 tests; ruff clean
 2026-05-05	LANE-B	T05-T06 submission prep	16:53	17:00	PASS	b758f15	3-minute demo script; X post draft under 280 chars; judge handout; checklist updated to 157 tests; doc checks clean
+2026-05-05	LANE-A	T03-T04 session history ledger	19:11	19:17	PASS	5b2da94	Session ledger persists judge runs to ~/.xrpfi/sessions.json; GET /sessions; Past Runs UI; 160 tests; ruff clean; integrated shared checkout
+2026-05-05	LANE-B	T05-T06 docker makefile	19:11	19:18	PASS	5b2da94	docker-compose.yml; Makefile targets; README Docker section; env audit; YAML valid; Makefile syntax OK; integrated shared checkout
+2026-05-05	ORCH	T01-T02 SSE stream ledger	19:09	19:18	PASS	5b2da94	SSE /stream; async /api/run; /status compatibility; 10 live UI steps; judge_demo step_callback; SSE smoke PASS; 160 tests; ruff clean
