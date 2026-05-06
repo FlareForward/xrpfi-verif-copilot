@@ -78,6 +78,22 @@ uv run python web/server.py   # open http://localhost:8088
 
 ![Demo UI](docs/screenshots/ui-demo.png)
 
+## Docker
+
+```bash
+cp .env.example .env
+docker compose up xrpfi
+```
+
+Open http://localhost:8088 for the browser UI.
+
+```bash
+docker compose --profile judge run --rm judge
+```
+
+The Compose setup uses `python:3.12-slim`, installs `uv` inside the container,
+mounts this repo at `/app`, and mounts `~/.xrpfi` for local XRPFi state.
+
 ---
 
 ## 0G Integration

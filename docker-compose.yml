@@ -1,0 +1,42 @@
+services:
+  xrpfi:
+    image: python:3.12-slim
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      UV_PROJECT_ENVIRONMENT: /tmp/xrpfi-venv
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./:/app
+      - ~/.xrpfi:/root/.xrpfi
+    command: >
+      sh -lc "apt-get update
+      && apt-get install -y --no-install-recommends git
+      && rm -rf /var/lib/apt/lists/*
+      && pip install --no-cache-dir uv
+      && uv sync --extra dev
+      && uv run python web/server.py"
+
+  judge:
+    image: python:3.12-slim
+    working_dir: /app
+    profiles:
+      - judge
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      UV_PROJECT_ENVIRONMENT: /tmp/xrpfi-venv
+    volumes:
+      - ./:/app
+      - ~/.xrpfi:/root/.xrpfi
+    command: >
+      sh -lc "apt-get update
+      && apt-get install -y --no-install-recommends git
+      && rm -rf /var/lib/apt/lists/*
+      && pip install --no-cache-dir uv
+      && uv sync --extra dev
+      && uv run python demo/judge_demo.py"

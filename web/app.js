@@ -5,10 +5,15 @@ const errorState = document.querySelector("#error-state");
 const resultState = document.querySelector("#result-state");
 const errorMessage = document.querySelector("#error-message");
 const steps = [...document.querySelectorAll("#steps li")];
+const flowSteps = [...document.querySelectorAll("#flow-steps li")];
 const flowNodes = [...document.querySelectorAll(".flow-node")];
+const stepStatus = document.querySelector("#step-status");
 const tickerFlr = document.querySelector("#ticker-flr");
 const tickerXrp = document.querySelector("#ticker-xrp");
 const tickerStatus = document.querySelector("#ticker-status");
+const pastRuns = document.querySelector("#past-runs");
+const pastRunsCount = document.querySelector("#past-runs-count");
+let eventSource = null;
 
 const escapeHtml = (value) =>
   String(value)
@@ -34,6 +39,19 @@ const formatTimestamp = (timestamp) => {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
+const formatSessionTimestamp = (timestamp) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "timestamp unavailable";
+  }
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const setState = (state) => {
   emptyState.classList.toggle("hidden", state !== "empty");
   loadingState.classList.toggle("hidden", state !== "loading");
@@ -44,7 +62,7 @@ const setState = (state) => {
 };
 
 const setStepProgress = (mode) => {
-  steps.forEach((step, index) => {
+  flowSteps.forEach((step, index) => {
     step.classList.toggle("active", mode === "loading" && index === 0);
     step.classList.toggle("done", mode === "done");
   });
@@ -52,6 +70,47 @@ const setStepProgress = (mode) => {
     node.classList.toggle("active", mode === "loading" ? index === 0 : index === 0);
     node.classList.toggle("done", mode === "done");
   });
+};
+
+const resetLiveSteps = () => {
+  stepStatus.textContent = "Waiting";
+  steps.forEach((step) => {
+    step.classList.remove("active", "done", "warn");
+    step.querySelector("p").textContent = "Waiting";
+  });
+  flowSteps.forEach((step) => {
+    step.classList.remove("active", "done", "warn");
+  });
+};
+
+const renderStep = (stepNumber, label, value, status) => {
+  const step = steps.find((item) => item.dataset.step === String(stepNumber));
+  const flowStep = flowSteps.find((item) => item.dataset.step === String(stepNumber));
+  if (!step) {
+    return;
+  }
+
+  step.classList.remove("active");
+  step.classList.add(status === "warn" ? "warn" : "done");
+  step.querySelector("strong").textContent = label;
+  step.querySelector("p").textContent = value;
+  stepStatus.textContent = `Step ${stepNumber}/10`;
+
+  if (flowStep) {
+    flowStep.classList.remove("active");
+    flowStep.classList.add(status === "warn" ? "warn" : "done");
+  }
+
+  const nextStep = steps.find((item) => item.dataset.step === String(Number(stepNumber) + 1));
+  const nextFlowStep = flowSteps.find(
+    (item) => item.dataset.step === String(Number(stepNumber) + 1),
+  );
+  if (nextStep) {
+    nextStep.classList.add("active");
+  }
+  if (nextFlowStep) {
+    nextFlowStep.classList.add("active");
+  }
 };
 
 const proofBadge = (record) => {
@@ -63,6 +122,18 @@ const proofBadge = (record) => {
     return `<span class="badge-link badge-link-muted">0G ${escapeHtml(record.zero_g.storage_tx_hash.slice(0, 10))}...</span>`;
   }
   return `<span class="badge-link badge-link-muted">Storage pending</span>`;
+};
+
+const sessionProofBadge = (session) => {
+  const tokenId = session.inft?.token_id;
+  const explorer = session.inft?.explorer_url;
+  if (tokenId && explorer) {
+    return `<a class="badge-link badge-link-success" href="${escapeHtml(explorer)}" target="_blank" rel="noreferrer">iNFT Token ${escapeHtml(tokenId)} ↗</a>`;
+  }
+  if (tokenId) {
+    return `<span class="badge-link badge-link-success">iNFT Token ${escapeHtml(tokenId)}</span>`;
+  }
+  return `<span class="badge-link badge-link-muted">Proof pending</span>`;
 };
 
 const priceTags = (prices = []) =>
@@ -111,6 +182,21 @@ const decision = (record, index) => `
     </div>
   </details>
 `;
+
+const pastRun = (session) => {
+  const stepsComplete = Array.isArray(session.steps) ? session.steps.length : 0;
+  return `
+    <details class="decision" open>
+      <summary>
+        <span>
+          <strong>${escapeHtml(formatSessionTimestamp(session.timestamp))}</strong>
+          <small>${escapeHtml(stepsComplete)}/10 steps</small>
+        </span>
+        ${sessionProofBadge(session)}
+      </summary>
+    </details>
+  `;
+};
 
 const renderResult = (result) => {
   document.querySelector("#xrp-amount").textContent = `${formatNumber(result.xrp_amount)} XRP`;
@@ -162,7 +248,69 @@ const refreshTicker = async () => {
   }
 };
 
+const loadPastRuns = async () => {
+  try {
+    const response = await fetch("/sessions", { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error("Session history unavailable.");
+    }
+
+    const sessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+    pastRunsCount.textContent = `${sessions.length} saved`;
+    pastRuns.innerHTML = sessions.length
+      ? sessions.map((session) => pastRun(session)).join("")
+      : `<p class="empty-state">No runs yet — click Run Judge Demo above</p>`;
+  } catch (error) {
+    pastRunsCount.textContent = "Unavailable";
+    pastRuns.innerHTML = `<p class="empty-state">Past runs unavailable</p>`;
+  }
+};
+
+const openDemoStream = () => {
+  if (eventSource) {
+    eventSource.close();
+  }
+
+  eventSource = new EventSource("/stream");
+  eventSource.onmessage = (message) => {
+    const event = JSON.parse(message.data);
+    if (event.step === "done") {
+      eventSource.close();
+      eventSource = null;
+      renderResult(event.result);
+      setStepProgress("done");
+      stepStatus.textContent = "Complete";
+      setState("result");
+      refreshTicker();
+      loadPastRuns();
+      return;
+    }
+    if (event.step === "error") {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      errorMessage.textContent = event.error || "The streaming demo failed.";
+      setStepProgress("empty");
+      setState("error");
+      return;
+    }
+    renderStep(event.step, event.label, event.value, event.status);
+  };
+  eventSource.onerror = () => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    errorMessage.textContent = "Live stream disconnected.";
+    setStepProgress("empty");
+    setState("error");
+  };
+};
+
 runButton.addEventListener("click", async () => {
+  resetLiveSteps();
   setStepProgress("loading");
   setState("loading");
 
@@ -174,16 +322,20 @@ runButton.addEventListener("click", async () => {
       throw new Error(payload.error || "The demo server returned an error.");
     }
 
-    renderResult(payload.result);
-    setStepProgress("done");
-    setState("result");
-    refreshTicker();
+    stepStatus.textContent = "Streaming";
+    openDemoStream();
   } catch (error) {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
     errorMessage.textContent = error instanceof Error ? error.message : String(error);
     setStepProgress("empty");
     setState("error");
   }
 });
 
+resetLiveSteps();
 refreshTicker();
+loadPastRuns();
 setInterval(refreshTicker, 30000);

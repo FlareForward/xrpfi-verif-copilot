@@ -33,6 +33,7 @@ from src.gensyn.node_b.subscriber import (  # noqa: E402
     AxlSubscriber as NodeBSubscriber,
 )
 from src.integrations.uniswap.client import UniswapClient  # noqa: E402
+from src.session import save_session  # noqa: E402
 
 GITHUB_URL = "https://github.com/FlareForward/xrpfi-verif-copilot"
 ZERO_G_EXPLORER = "https://chainscan.0g.ai"
@@ -40,6 +41,7 @@ COORD_DOC = Path.home() / "codex-coord" / "xrpfi-storage-demo-20260505.md"
 INFT_TOKEN_ID = "1"
 INFT_TX = "0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd"
 UNISWAP_FIXTURE_USDC = 2341.22
+StepCallback = Callable[[dict[str, Any]], None]
 
 
 async def safe_step[T](
@@ -233,24 +235,34 @@ async def run_axl_receipt(
         await subscriber.close()
 
 
-async def run_judge_demo() -> None:
+async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str, Any]:
     """Run the full judge demo flow and print numbered proof lines."""
     suppress_demo_logging()
     print_header()
+    steps: list[dict[str, Any]] = []
 
     fallback_prices = []
     prices, price_error = await safe_step("FTSO", step_fetch_ftso_prices, fallback_prices)
     flr_usd, flr_stale = find_price(prices, "FLR/USD", 0.0076)
     xrp_usd, xrp_stale = find_price(prices, "XRP/USD", 1.41)
     price_note = price_error or ("fallback price feed stale" if flr_stale or xrp_stale else None)
-    print_line(1, "FTSO live prices", f"FLR/USD={flr_usd:.4f}  XRP/USD={xrp_usd:.2f}", price_note)
+    emit_step(
+        steps,
+        step_callback,
+        1,
+        "FTSO live prices",
+        f"FLR/USD={flr_usd:.4f}  XRP/USD={xrp_usd:.2f}",
+        price_note,
+    )
 
     mint_helper, mint_ens_error = await safe_step(
         "mint-helper ENS",
         lambda: step_resolve_ens("mint-helper.eth"),
         "0x81e51856d72023490cF7DEc1A6717f4269028F95",
     )
-    print_line(
+    emit_step(
+        steps,
+        step_callback,
         2,
         "ENS resolved",
         f"mint-helper.eth -> {short_address(mint_helper)}",
@@ -262,7 +274,9 @@ async def run_judge_demo() -> None:
         lambda: step_resolve_ens("yield-router.eth"),
         "0x81e51856d72023490cF7DEc1A6717f4269028F95",
     )
-    print_line(
+    emit_step(
+        steps,
+        step_callback,
         3,
         "ENS resolved",
         f"yield-router.eth -> {short_address(yield_router)}",
@@ -280,7 +294,14 @@ async def run_judge_demo() -> None:
         if attest_record.fdc_proof and not attest_record.fdc_proof.verified
         else None
     )
-    print_line(4, "FDC attestation", f"XRP payment attested (proof_hash={proof_hash})", fdc_note)
+    emit_step(
+        steps,
+        step_callback,
+        4,
+        "FDC attestation",
+        f"XRP payment attested (proof_hash={proof_hash})",
+        fdc_note,
+    )
 
     mint_record, mint_error = await safe_step(
         "FXRP mint",
@@ -291,7 +312,9 @@ async def run_judge_demo() -> None:
     mint_note = mint_error or (
         "FAssets fixture" if "demo" in mint_record.result_summary.lower() else None
     )
-    print_line(
+    emit_step(
+        steps,
+        step_callback,
         5,
         "FXRP minted",
         f"{DEMO_XRP_AMOUNT:.0f} XRP -> {fxrp_minted:.2f} FXRP (Songbird testnet)",
@@ -306,18 +329,27 @@ async def run_judge_demo() -> None:
     route_note = route_error or (
         "policy fixture" if "sparkdex" in route_record.action_taken.lower() else None
     )
-    print_line(6, "Yield routed", "60% SparkDEX / 40% Kinetic", route_note)
+    emit_step(
+        steps,
+        step_callback,
+        6,
+        "Yield routed",
+        "60% SparkDEX / 40% Kinetic",
+        route_note,
+    )
 
     quote_amount, is_live_quote = await fetch_uniswap_quote()
     quote_suffix = "live" if is_live_quote else "fixture — set UNISWAP_API_KEY"
-    print_line(
+    emit_step(
+        steps,
+        step_callback,
         7,
         "Uniswap quote",
         f"WETH→USDC: 1.0 WETH = {quote_amount:,.2f} USDC ({quote_suffix})",
     )
 
     axl_receipt, axl_error = await run_axl_receipt(mint_record, fxrp_minted)
-    print_line(8, "Gensyn AXL", axl_receipt, axl_error)
+    emit_step(steps, step_callback, 8, "Gensyn AXL", axl_receipt, axl_error)
 
     records = [attest_record, mint_record, route_record]
     coord_tx = extract_real_storage_tx()
@@ -339,7 +371,7 @@ async def run_judge_demo() -> None:
         if real_tx_hash(storage_tx)
         else f"tx={storage_tx or 'local-proof'}"
     )
-    print_line(9, "0G storage", storage_display, storage_note)
+    emit_step(steps, step_callback, 9, "0G storage", storage_display, storage_note)
 
     inft_url = f"{ZERO_G_EXPLORER}/tx/{INFT_TX}"
     _, inft_error = await safe_step(
@@ -347,9 +379,32 @@ async def run_judge_demo() -> None:
         lambda: step_mint_inft(records, storage_uri=storage_tx or "local-proof"),
         None,
     )
-    print_line(10, "iNFT minted", f"token={INFT_TOKEN_ID} {inft_url}", inft_error)
+    emit_step(
+        steps,
+        step_callback,
+        10,
+        "iNFT minted",
+        f"token={INFT_TOKEN_ID} {inft_url}",
+        inft_error,
+    )
 
     print_footer(inft_url)
+    session = save_session(steps, records)
+    return {
+        "agents": [
+            {"ens": "mint-helper.eth", "address": mint_helper},
+            {"ens": "yield-router.eth", "address": yield_router},
+        ],
+        "prices": [price.model_dump(mode="json") for price in prices],
+        "xrp_amount": DEMO_XRP_AMOUNT,
+        "fxrp_minted": fxrp_minted,
+        "decisions": [record.model_dump(mode="json") for record in records],
+        "records": [record.model_dump(mode="json") for record in records],
+        "steps": steps,
+        "session": session,
+        "storage_hashes": [storage_tx] if storage_tx else [],
+        "inft_url": inft_url,
+    }
 
 
 def print_header() -> None:
@@ -366,6 +421,29 @@ def print_line(index: int, label: str, message: str, warning: str | None = None)
     """Print a single numbered judge line."""
     suffix = f"  ⚠ fallback ({clean_warning(warning)})" if warning else ""
     print(f"[{index}] {label:<18} {message}{suffix}")
+
+
+def emit_step(
+    steps: list[dict[str, Any]],
+    step_callback: StepCallback | None,
+    index: int,
+    label: str,
+    message: str,
+    warning: str | None = None,
+) -> None:
+    """Print a judge line and optionally stream the same step to the browser."""
+    print_line(index, label, message, warning)
+    event = {
+        "step": index,
+        "label": label,
+        "value": message,
+        "status": "warn" if warning else "ok",
+    }
+    if warning:
+        event["warning"] = clean_warning(warning)
+    steps.append(event)
+    if step_callback:
+        step_callback(dict(event))
 
 
 def clean_warning(warning: str) -> str:
@@ -388,14 +466,15 @@ def print_footer(audit_url: str) -> None:
     print("=" * 60)
 
 
-def main() -> None:
+def main(step_callback: StepCallback | None = None) -> dict[str, Any] | None:
     """Console entry point."""
     try:
-        asyncio.run(run_judge_demo())
+        return asyncio.run(run_judge_demo(step_callback=step_callback))
     except KeyboardInterrupt:
         print("\nJudge demo interrupted.")
     except Exception as exc:
         print(f"\n⚠ Judge demo failed safely: {exc}")
+    return None
 
 
 if __name__ == "__main__":

@@ -52,18 +52,40 @@
 
       <section class="workspace">
         <aside class="rail" aria-label="Demo flow">
-          <ol id="steps">
+          <ol id="flow-steps">
             <li data-step="1" class="active">FTSO prices</li>
             <li data-step="2">ENS agents</li>
             <li data-step="3">FDC attestation</li>
             <li data-step="4">FXRP mint</li>
             <li data-step="5">Yield route</li>
             <li data-step="6">0G storage</li>
-            <li data-step="7">iNFT proof</li>
+            <li data-step="7">Uniswap quote</li>
+            <li data-step="8">Gensyn AXL</li>
+            <li data-step="9">0G storage</li>
+            <li data-step="10">iNFT proof</li>
           </ol>
         </aside>
 
         <section class="panel" aria-live="polite">
+          <section class="live-steps" aria-label="Live judge demo steps">
+            <div class="section-heading">
+              <h2>Steps</h2>
+              <span id="step-status">Waiting</span>
+            </div>
+            <ol id="steps" class="step-list">
+              <li data-step="1"><span>01</span><strong>FTSO live prices</strong><p>Waiting</p></li>
+              <li data-step="2"><span>02</span><strong>ENS resolved</strong><p>Waiting</p></li>
+              <li data-step="3"><span>03</span><strong>ENS resolved</strong><p>Waiting</p></li>
+              <li data-step="4"><span>04</span><strong>FDC attestation</strong><p>Waiting</p></li>
+              <li data-step="5"><span>05</span><strong>FXRP minted</strong><p>Waiting</p></li>
+              <li data-step="6"><span>06</span><strong>Yield routed</strong><p>Waiting</p></li>
+              <li data-step="7"><span>07</span><strong>Uniswap quote</strong><p>Waiting</p></li>
+              <li data-step="8"><span>08</span><strong>Gensyn AXL</strong><p>Waiting</p></li>
+              <li data-step="9"><span>09</span><strong>0G storage</strong><p>Waiting</p></li>
+              <li data-step="10"><span>10</span><strong>iNFT minted</strong><p>Waiting</p></li>
+            </ol>
+          </section>
+
           <div id="empty-state" class="empty-state">
             <section class="flow-card" aria-label="Agent flow diagram">
               <div class="flow-node active">
@@ -163,6 +185,14 @@
               <a id="proof-link" href="#" target="_blank" rel="noreferrer">Open proof</a>
             </section>
           </div>
+
+          <section class="past-runs" aria-label="Past judge demo runs">
+            <div class="section-heading">
+              <h2>Past Runs</h2>
+              <span id="past-runs-count">0 saved</span>
+            </div>
+            <div id="past-runs" class="decision-list"></div>
+          </section>
         </section>
       </section>
     </main>
