@@ -1,4 +1,7 @@
-.PHONY: help install demo judge ui test lint screenshot clean
+.PHONY: help install demo judge ui test lint verify-funding update-deployment screenshot clean
+
+VERIFY_FUNDING_ARGS ?=
+UPDATE_DEPLOYMENT_ARGS ?= --allow-noop
 
 help:
 	@printf "XRPFi Stream Ledger commands\n\n"
@@ -8,6 +11,8 @@ help:
 	@printf "  make ui       Start the browser UI on http://localhost:8088\n"
 	@printf "  make test     Run the test suite\n"
 	@printf "  make lint     Run Ruff checks\n"
+	@printf "  make verify-funding     Check the configured 0G wallet balance\n"
+	@printf "  make update-deployment  Preview deployment address updates\n"
 	@printf "  make clean    Remove local cache and build artifacts\n"
 
 install:
@@ -27,6 +32,12 @@ test:
 
 lint:
 	uv run ruff check src/ tests/ demo/ web/
+
+verify-funding:
+	uv run python scripts/check_0g_balance.py $(VERIFY_FUNDING_ARGS)
+
+update-deployment:
+	uv run python scripts/update_deployment.py $(UPDATE_DEPLOYMENT_ARGS)
 
 screenshot: ## Generate UI screenshot for docs/screenshots/ui-demo.png
 	python3 scripts/capture_screenshot.py
