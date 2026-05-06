@@ -1,7 +1,7 @@
 .PHONY: help install demo judge ui test lint verify-funding update-deployment screenshot clean
 
 VERIFY_FUNDING_ARGS ?=
-UPDATE_DEPLOYMENT_ARGS ?= --allow-noop
+UPDATE_DEPLOYMENT_ARGS ?= --storage-tx $(STORAGE_TX) --inft-tx $(INFT_TX)
 
 help:
 	@printf "XRPFi Stream Ledger commands\n\n"
@@ -11,8 +11,8 @@ help:
 	@printf "  make ui       Start the browser UI on http://localhost:8088\n"
 	@printf "  make test     Run the test suite\n"
 	@printf "  make lint     Run Ruff checks\n"
-	@printf "  make verify-funding     Check the configured 0G wallet balance\n"
-	@printf "  make update-deployment  Preview deployment address updates\n"
+	@printf "  make verify-funding     Check 0G wallet balance (exit 1 if unfunded)\n"
+	@printf "  make update-deployment  Patch deployment docs after funding (args: STORAGE_TX=0x... INFT_TX=0x...)\n"
 	@printf "  make clean    Remove local cache and build artifacts\n"
 
 install:

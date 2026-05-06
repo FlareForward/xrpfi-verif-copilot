@@ -1,9 +1,4 @@
-"""Preflight the configured 0G funding wallet.
-
-The script derives the wallet address from ZERO_G_PRIVATE_KEY, checks the
-configured 0G RPC, and reports whether the wallet has enough OG for post-funding
-storage uploads and iNFT minting.
-"""
+"""Preflight the 0G storage wallet balance."""
 
 from __future__ import annotations
 
@@ -14,12 +9,13 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Final
 
-from eth_account import Account
 from web3 import Web3
 
 DEFAULT_RPC_URL: Final = "https://0g-rpc.publicnode.com"
 DEFAULT_CHAIN_ID: Final = 16661
-DEFAULT_MIN_BALANCE_OG: Final = Decimal("0.02")
+DEFAULT_MIN_BALANCE_OG: Final = Decimal("0.1")
+DEPLOYER_ADDRESS: Final = "0x81e51856d72023490cF7DEc1A6717f4269028F95"
+EXPLORER_URL: Final = f"https://chainscan.0g.ai/address/{DEPLOYER_ADDRESS}"
 
 
 @dataclass(frozen=True)
@@ -34,7 +30,7 @@ class BalanceCheck:
 
     @property
     def funded(self) -> bool:
-        return self.balance_og >= self.minimum_og
+        return self.balance_og > self.minimum_og
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +65,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_env_file(path: Path) -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        load_dotenv = None
+
+    if load_dotenv is not None:
+        load_dotenv(path)
+        return
+
     if not path.exists():
         return
 
@@ -115,8 +120,7 @@ def run_check(args: argparse.Namespace) -> BalanceCheck | None:
     rpc_url = args.rpc_url or os.environ.get("ZERO_G_RPC_URL") or DEFAULT_RPC_URL
     expected_chain_id = args.chain_id or int(os.environ.get("ZERO_G_CHAIN_ID", DEFAULT_CHAIN_ID))
 
-    account = Account.from_key(private_key)
-    address = Web3.to_checksum_address(account.address)
+    address = Web3.to_checksum_address(DEPLOYER_ADDRESS)
     w3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={"timeout": 15}))
 
     if not w3.is_connected():
@@ -141,13 +145,17 @@ def print_result(result: BalanceCheck | None) -> int:
     if result is None:
         return 0
 
-    status = "PASS" if result.funded else "FAIL"
-    print(f"0G funding check: {status}")
-    print(f"wallet:   {result.address}")
-    print(f"chain_id: {result.chain_id}")
-    print(f"rpc:      {result.rpc_url}")
-    print(f"balance:  {result.balance_og} OG")
-    print(f"minimum:  {result.minimum_og} OG")
+    print("0G Wallet Balance Check")
+    print(f"Address: {result.address}")
+    print(f"Balance: {result.balance_og:.6f} OG")
+    print("Chain: 0G Mainnet (ID 16661)")
+    print(f"RPC: {result.rpc_url}")
+    print()
+    if result.funded:
+        print("Status: ✅ Funded (ready for storage upload)")
+    else:
+        print("Status: ⚠ Unfunded — send at least 0.5 OG to enable real storage tx hashes")
+    print(f"Explorer: {EXPLORER_URL}")
     return 0 if result.funded else 1
 
 

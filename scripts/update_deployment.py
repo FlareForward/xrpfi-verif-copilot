@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Final
 
 DEFAULT_DEPLOYMENT_FILE: Final = "DEPLOYMENT_ADDRESSES.md"
+DEFAULT_CHECKLIST_FILE: Final = "docs/JUDGES_CHECKLIST.md"
 DEFAULT_EXPLORER: Final = "https://chainscan.0g.ai"
 ADDRESS_RE: Final = re.compile(r"^0x[a-fA-F0-9]{40}$")
 TX_RE: Final = re.compile(r"^0x[a-fA-F0-9]{64}$")
@@ -55,6 +56,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", default=DEFAULT_DEPLOYMENT_FILE, help="Deployment markdown file.")
     parser.add_argument(
+        "--checklist-file",
+        default=DEFAULT_CHECKLIST_FILE,
+        help="Judge checklist markdown file.",
+    )
+    parser.add_argument(
         "--env-file",
         default=".env",
         help="Dotenv file to read for ZERO_G_* values.",
@@ -66,6 +72,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rpc-url")
     parser.add_argument("--explorer")
     parser.add_argument("--mint-tx")
+    parser.add_argument("--inft-tx", dest="mint_tx")
     parser.add_argument("--token-id")
     parser.add_argument("--storage-tx")
     parser.add_argument(
@@ -219,6 +226,36 @@ def apply_update(text: str, update: DeploymentUpdate) -> str:
     return text
 
 
+def apply_checklist_update(text: str, update: DeploymentUpdate) -> str:
+    if update.storage_tx:
+        storage_url = f"{update.explorer}/tx/{update.storage_tx}"
+        storage_row = (
+            "| 0G Storage Tx | "
+            f"`{update.storage_tx}` | [chainscan.0g.ai/tx/{update.storage_tx[:10]}...]"
+            f"({storage_url}) |"
+        )
+        if re.search(r"^\| 0G Storage Tx \| .+ \| .+ \|$", text, flags=re.MULTILINE):
+            text = replace_line(text, r"^\| 0G Storage Tx \| .+ \| .+ \|$", storage_row)
+        else:
+            text = replace_line(
+                text,
+                r"^(\| iNFT Mint Tx \| .+ \| .+ \|)$",
+                rf"\1\n{storage_row}",
+            )
+
+    if update.mint_tx:
+        mint_url = f"{update.explorer}/tx/{update.mint_tx}"
+        text = replace_line(
+            text,
+            r"^\| iNFT Mint Tx \| `0x[a-fA-F0-9]{64}` \| \[[^\]]+\]\([^)]+\) \|$",
+            (
+                f"| iNFT Mint Tx | `{update.mint_tx}` | "
+                f"[chainscan.0g.ai/tx/{update.mint_tx[:10]}...]({mint_url}) |"
+            ),
+        )
+    return text
+
+
 def print_diff(path: Path, before: str, after: str) -> None:
     diff = difflib.unified_diff(
         before.splitlines(keepends=True),
@@ -229,9 +266,23 @@ def print_diff(path: Path, before: str, after: str) -> None:
     print("".join(diff), end="")
 
 
+def print_changed_lines(path: Path, before: str, after: str) -> None:
+    before_lines = before.splitlines()
+    after_lines = after.splitlines()
+    print(f"\nChanged lines in {path}:")
+    changed = False
+    for line in difflib.ndiff(before_lines, after_lines):
+        if line.startswith("- ") or line.startswith("+ "):
+            changed = True
+            print(line)
+    if not changed:
+        print("  none")
+
+
 def main() -> int:
     args = parse_args()
     path = Path(args.file)
+    checklist_path = Path(args.checklist_file)
     load_env_file(Path(args.env_file))
     update = build_update(args)
 
@@ -241,14 +292,23 @@ def main() -> int:
 
     before = path.read_text(encoding="utf-8")
     after = apply_update(before, update)
-    if before == after:
-        print("Deployment file already matches supplied values.")
+    checklist_before = checklist_path.read_text(encoding="utf-8")
+    checklist_after = apply_checklist_update(checklist_before, update)
+    if before == after and checklist_before == checklist_after:
+        print("Deployment docs already match supplied values.")
         return 0
 
-    print_diff(path, before, after)
+    if before != after:
+        print_diff(path, before, after)
+        print_changed_lines(path, before, after)
+    if checklist_before != checklist_after:
+        print_diff(checklist_path, checklist_before, checklist_after)
+        print_changed_lines(checklist_path, checklist_before, checklist_after)
     if args.write:
         path.write_text(after, encoding="utf-8")
+        checklist_path.write_text(checklist_after, encoding="utf-8")
         print(f"\nUpdated {path}")
+        print(f"Updated {checklist_path}")
     else:
         print("\nDry run only; rerun with --write to update the file.")
     return 0
