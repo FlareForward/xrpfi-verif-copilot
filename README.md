@@ -68,7 +68,7 @@ See [DEPLOYMENT_ADDRESSES.md](DEPLOYMENT_ADDRESSES.md) for contract address and 
 ```bash
 pip install uv && uv pip install -e ".[dev]"
 cp .env.example .env          # add GOOGLE_API_KEY
-uv run python demo/judge_demo.py
+uv run python demo/judge_demo.py   # see docs/JUDGES_CHECKLIST.md for expected output
 ```
 
 ```bash

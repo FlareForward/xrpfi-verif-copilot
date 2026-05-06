@@ -1,4 +1,4 @@
-.PHONY: help install demo judge ui test lint clean
+.PHONY: help install demo judge ui test lint screenshot clean
 
 help:
 	@printf "XRPFi Stream Ledger commands\n\n"
@@ -27,6 +27,9 @@ test:
 
 lint:
 	uv run ruff check src/ tests/ demo/ web/
+
+screenshot: ## Generate UI screenshot for docs/screenshots/ui-demo.png
+	python3 scripts/capture_screenshot.py
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov dist build *.egg-info

@@ -31,6 +31,8 @@ cp .env.example .env  # add GOOGLE_API_KEY
 uv run python demo/judge_demo.py
 ```
 
+See [docs/JUDGES_CHECKLIST.md](docs/JUDGES_CHECKLIST.md) for expected output, fallback explanations, and sponsor integration evidence.
+
 ## Demo Video
 
 Demo video: pending final capture.
