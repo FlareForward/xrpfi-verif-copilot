@@ -39,4 +39,4 @@ Demo video: pending final capture.
 
 ## GitHub
 
-https://github.com/flareforward/xrpfi-verif-copilot
+https://github.com/FlareForward/xrpfi-verif-copilot
