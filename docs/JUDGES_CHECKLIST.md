@@ -28,6 +28,26 @@ The live anchors are intentionally narrow: a real 0G iNFT and live FTSO price re
 | FTSO price reads | live | `FLR/USD`, `XRP/USD` from `coston2-api.flare.network` | Runtime output |
 | Reality Matrix | source of truth | [REALITY_MATRIX.md](../REALITY_MATRIX.md) | Exact live/fixture/planned state |
 
+## ENS Registration Path
+
+ENS identities are code-ready on Sepolia and blocked only by wallet funding.
+To complete live registration:
+
+```bash
+# 1. Fund the hackathon wallet with 0.05 Sepolia ETH:
+#    0x53730993203f21b9ac8d10a8CA5CA5d92b036118
+#
+# 2. Confirm .env uses the public Sepolia RPC:
+#    ETH_SEPOLIA_RPC_URL=https://rpc.sepolia.org
+#
+# 3. Dry-run first, then submit the live registration:
+uv run python scripts/register_ens.py --dry-run
+uv run python scripts/register_ens.py
+```
+
+The script reads `AGENT_PRIVATE_KEY` from `.env` and registers
+`mint-helper.eth` plus `yield-router.eth` through the Sepolia ENS flow.
+
 ## Expected Receipt Output
 
 The demo should read as a receipt, not as proof that every sponsor integration is live:
@@ -61,8 +81,8 @@ Proof Artifacts
 | FTSO prices | live | hits `coston2-api.flare.network` on every run | |
 | 0G iNFT (token 1) | live | [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) on chainscan.0g.ai | minted 2026-05-04 |
 | 0G storage upload | planned | wallet `0x81e518...` has 0 OG | see `ZERO_G_STORAGE_STATUS.md` |
-| ENS mint-helper.eth | planned | name unregistered; Sepolia wallet unfunded | script ready in `scripts/register_ens.py` |
-| ENS yield-router.eth | planned | name unregistered; Sepolia wallet unfunded | |
+| ENS mint-helper.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | fund `0x5373...6118`, then run `scripts/register_ens.py` |
+| ENS yield-router.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | same registration run as `mint-helper.eth` |
 | FDC attestation | fixture | demo proof hash; not a real XRPL tx | |
 | FAssets mint | fixture | stub tx params; no on-chain broadcast | |
 | Uniswap WETH/USDC quote | fixture | no API key set; pair unrelated to FXRP | |
@@ -76,7 +96,7 @@ Proof Artifacts
 | `GOOGLE_API_KEY` not set | deterministic reasoning fallback | Add key to `.env` |
 | 0G wallet unfunded | `[PLANNED — wallet unfunded]` | Top up `0x81e518...` on Chain 16661 |
 | `UNISWAP_API_KEY` not set | `[FIXTURE — no API key]` | Add key to `.env` |
-| ENS not registered | `[PLANNED — name unregistered]` | Register on Sepolia with `scripts/register_ens.py` |
+| ENS not registered | `[PLANNED — name unregistered]` | Fund `0x5373...6118` with 0.05 Sepolia ETH, dry-run, then run `scripts/register_ens.py` |
 | Gensyn node not connected | `[FIXTURE — local AXL-compatible fallback]` | Connect a real Gensyn node |
 
 ## Quality Check
