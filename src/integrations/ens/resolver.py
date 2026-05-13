@@ -179,8 +179,8 @@ class EnsResolver:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    async def resolve(self, name: str) -> str:
-        """Resolve an ENS name to an Ethereum address (forward resolution).
+    async def resolve_with_status(self, name: str) -> tuple[str, bool]:
+        """Resolve an ENS name and report whether the result is live.
 
         Resolution order:
         1. Try web3.py ENS module (if web3 installed).
@@ -193,12 +193,13 @@ class EnsResolver:
             name: ENS name, e.g. "mint-helper.eth".
 
         Returns:
-            Checksummed Ethereum address.
+            Tuple of (checksummed Ethereum address, is_live). ``is_live`` is
+            False only when the returned address came from TEST_ADDRESSES.
 
         Raises:
             ValueError: if name cannot be resolved and no fallback exists.
         """
-        logger.info("ENS: resolve(%s)", name)
+        logger.info("ENS: resolve_with_status(%s)", name)
 
         # Attempt live resolution
         address = await self._resolve_via_web3(name)
@@ -208,7 +209,7 @@ class EnsResolver:
 
         if address is not None:
             logger.info("ENS: %s → %s (live)", name, address)
-            return address
+            return address, True
 
         # Fallback for unregistered hackathon names
         if name in TEST_ADDRESSES:
@@ -218,11 +219,19 @@ class EnsResolver:
                 "Register the name before production deployment.",
                 name, fallback,
             )
-            return fallback
+            return fallback, False
 
         raise ValueError(
             f"ENS: could not resolve {name!r} — not registered and no test fallback defined."
         )
+
+    async def resolve(self, name: str) -> str:
+        """Resolve an ENS name to an Ethereum address (forward resolution).
+
+        See ``resolve_with_status`` for the status-aware form.
+        """
+        address, _is_live = await self.resolve_with_status(name)
+        return address
 
     async def reverse_resolve(self, address: str) -> str:
         """Reverse-resolve an Ethereum address to an ENS name.
