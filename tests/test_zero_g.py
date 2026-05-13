@@ -6,11 +6,15 @@ Regression pins — per Silent Regression Protocol, do NOT weaken these tests.
 from __future__ import annotations
 
 import json
+from base64 import b64decode
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import respx
+from httpx import Response
 
+from src.config import Settings
 from src.contracts.decision_log import DecisionRecord, FtsoPrice
 from src.integrations.zero_g.client import StorageResult, ZeroGClient
 from src.integrations.zero_g.inft import INFTMinter
@@ -89,13 +93,86 @@ class TestZeroGClient:
     async def test_upload_http_fallback_handles_error(self):
         """Pin: upload must not raise even if 0G endpoint is unreachable."""
         record = make_record()
+        self.client = ZeroGClient(indexer_url="https://indexer-storage-turbo.0g.ai/", private_key=None)
         self.client._sdk_available = False
-        # No mock — will hit network, which may fail, and should use an explicit local proof.
-        result = await self.client.upload_record(record)
+
+        with respx.mock(assert_all_called=True) as router:
+            router.post("https://indexer-storage-turbo.0g.ai/file/segment").mock(
+                return_value=Response(600, json={"code": 600, "message": "storage unavailable"})
+            )
+            result = await self.client.upload_record(record)
+
         assert result.tx_hash.startswith("local://sha256/") or result.tx_hash.startswith("0x")
         assert result.tx_hash.startswith("simulated-") is False
         assert result.live is result.tx_hash.startswith("0x")
         assert record.is_persisted()
+
+    @pytest.mark.asyncio
+    async def test_upload_http_fallback_posts_documented_segment_gateway(self):
+        data = b'{"hello":"0g"}'
+        root_hash = self.client._compute_root_hash(data)
+        tx_hash = "0x" + "a" * 64
+
+        with respx.mock(assert_all_called=True) as router:
+            route = router.post("https://indexer-storage-turbo.0g.ai/file/segment").mock(
+                return_value=Response(
+                    200,
+                    json={
+                        "code": 0,
+                        "data": {
+                            "txHash": tx_hash,
+                            "rootHash": root_hash,
+                        },
+                    },
+                )
+            )
+            result = await self.client._upload_via_http(data, root_hash)
+
+        request = route.calls.last.request
+        payload = json.loads(request.content.decode("utf-8"))
+        assert payload["root"] == root_hash
+        assert payload["index"] == 0
+        assert b64decode(payload["data"]) == data
+        assert payload["proof"] == {}
+        assert payload["expectedReplica"] == 1
+        assert result.tx_hash == tx_hash
+        assert result.root_hash == root_hash
+        assert result.backend == "0g-indexer-http"
+        assert result.live is True
+
+    @pytest.mark.asyncio
+    async def test_upload_http_fallback_requires_tx_hash_for_live_result(self):
+        data = b'{"hello":"0g"}'
+        root_hash = self.client._compute_root_hash(data)
+
+        with respx.mock(assert_all_called=True) as router:
+            router.post("https://indexer-storage-turbo.0g.ai/file/segment").mock(
+                return_value=Response(200, json={"code": 0, "data": {"rootHash": root_hash}})
+            )
+            result = await self.client._upload_via_http(data, root_hash)
+
+        assert result.tx_hash.startswith("local://sha256/")
+        assert result.live is False
+        assert result.error == "HTTP upload response did not include a transaction hash"
+
+    @pytest.mark.asyncio
+    async def test_upload_http_fallback_handles_malformed_json_response(self):
+        data = b'{"hello":"0g"}'
+        root_hash = self.client._compute_root_hash(data)
+
+        with respx.mock(assert_all_called=True) as router:
+            router.post("https://indexer-storage-turbo.0g.ai/file/segment").mock(
+                return_value=Response(200, text="not json")
+            )
+            result = await self.client._upload_via_http(data, root_hash)
+
+        assert result.tx_hash.startswith("local://sha256/")
+        assert result.live is False
+        assert result.error is not None
+
+    def test_zero_g_storage_url_defaults_to_mainnet_turbo_indexer(self):
+        settings = Settings()
+        assert settings.zero_g_storage_url == "https://indexer-storage-turbo.0g.ai"
 
 
 class TestINFTMinter:

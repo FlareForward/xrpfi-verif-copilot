@@ -15,6 +15,7 @@ import logging
 import os
 import subprocess
 import tempfile
+from base64 import b64encode
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -26,7 +27,8 @@ from src.contracts.decision_log import DecisionRecord
 
 logger = logging.getLogger(__name__)
 
-# 0G mainnet defaults — override via env vars
+# 0G mainnet defaults — override via env vars.
+# The storage indexer value is the base gateway URL; HTTP uploads use /file/segment.
 ZERO_G_EVM_RPC = os.environ.get("ZERO_G_RPC_URL", "https://0g-rpc.publicnode.com")
 ZERO_G_INDEXER_URL = os.environ.get("ZERO_G_STORAGE_URL", "https://indexer-storage-turbo.0g.ai")
 ZERO_G_CHAIN_ID = int(os.environ.get("ZERO_G_CHAIN_ID", "16661"))
@@ -62,7 +64,7 @@ class ZeroGClient:
         private_key: str | None = None,
     ) -> None:
         self.evm_rpc = evm_rpc
-        self.indexer_url = indexer_url
+        self.indexer_url = indexer_url.rstrip("/")
         self.flow_contract = flow_contract
         self.private_key = private_key
         self._sdk_available = self._check_sdk()
@@ -189,23 +191,36 @@ class ZeroGClient:
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 resp = await client.post(
-                    f"{self.indexer_url}/upload",
-                    content=data,
-                    headers={"Content-Type": "application/octet-stream"},
+                    f"{self.indexer_url}/file/segment",
+                    json={
+                        "root": root_hash,
+                        "index": 0,
+                        "data": b64encode(data).decode("ascii"),
+                        "proof": {},
+                        "expectedReplica": 1,
+                    },
                 )
                 if resp.status_code in (200, 201):
-                    body = cast(dict[str, Any], resp.json())
-                    tx_hash = str(body.get("tx_hash", root_hash))
-                    logger.info("0G HTTP upload success: %s", tx_hash)
-                    return StorageResult(
-                        tx_hash=tx_hash,
-                        root_hash=root_hash,
-                        size_bytes=len(data),
-                        stored_at=datetime.now(UTC),
-                        explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
-                        backend="0g-indexer-http",
-                        live=True,
-                    )
+                    try:
+                        body = self._parse_http_response(resp)
+                        tx_hash = self._extract_tx_hash(body)
+                        if tx_hash is not None:
+                            real_root = self._extract_root_hash(body) or root_hash
+                            logger.info("0G HTTP upload success: %s", tx_hash)
+                            return StorageResult(
+                                tx_hash=tx_hash,
+                                root_hash=real_root,
+                                size_bytes=len(data),
+                                stored_at=datetime.now(UTC),
+                                explorer_url=f"{ZERO_G_EXPLORER}/tx/{tx_hash}",
+                                backend="0g-indexer-http",
+                                live=True,
+                            )
+                        error = "HTTP upload response did not include a transaction hash"
+                        logger.warning("0G HTTP upload incomplete: %s body=%s", error, body)
+                    except (json.JSONDecodeError, RuntimeError) as e:
+                        error = str(e)
+                        logger.warning("0G HTTP upload response invalid: %s", e)
                 else:
                     error = f"HTTP {resp.status_code}: {resp.text[:160]}"
                     logger.warning("0G HTTP upload unavailable: %s", error)
@@ -224,3 +239,36 @@ class ZeroGClient:
             live=False,
             error=error or "0G storage endpoint unavailable",
         )
+
+    def _parse_http_response(self, resp: httpx.Response) -> dict[str, Any]:
+        """Parse 0G gateway business-response JSON and surface business errors."""
+        body = cast(dict[str, Any], resp.json())
+        code = body.get("code")
+        if code not in (None, 0, "0"):
+            message = body.get("message", "0G HTTP gateway business error")
+            raise RuntimeError(f"0G HTTP gateway error {code}: {message}")
+        return body
+
+    def _extract_tx_hash(self, body: dict[str, Any]) -> str | None:
+        data = body.get("data")
+        candidates: list[Any] = [body]
+        if isinstance(data, dict):
+            candidates.insert(0, data)
+        for candidate in candidates:
+            for key in ("tx_hash", "txHash", "transactionHash"):
+                value = candidate.get(key)
+                if isinstance(value, str) and value.startswith("0x"):
+                    return value
+        return None
+
+    def _extract_root_hash(self, body: dict[str, Any]) -> str | None:
+        data = body.get("data")
+        candidates: list[Any] = [body]
+        if isinstance(data, dict):
+            candidates.insert(0, data)
+        for candidate in candidates:
+            for key in ("root_hash", "rootHash", "root"):
+                value = candidate.get(key)
+                if isinstance(value, str) and value.startswith("0x"):
+                    return value
+        return None
