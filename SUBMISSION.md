@@ -10,6 +10,9 @@ XRPFi is the flight recorder for AI finance: every agent decision leaves a struc
 
 - **0G iNFT:** token 1 — [chainscan.0g.ai](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd)
 - **FTSO prices:** live data from `coston2-api.flare.network` on every run
+- **ENS identities:** code-ready for Sepolia; live registration is pending
+  0.05 Sepolia ETH funding to `0x53730993203f21b9ac8d10a8CA5CA5d92b036118`,
+  then `uv run python scripts/register_ens.py`.
 
 See [REALITY_MATRIX.md](REALITY_MATRIX.md) for exact live/fixture/planned state.
 
@@ -20,8 +23,8 @@ See [REALITY_MATRIX.md](REALITY_MATRIX.md) for exact live/fixture/planned state.
 | FTSO prices | live | hits `coston2-api.flare.network` on every run | Receipt input data |
 | 0G iNFT (token 1) | live | [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) on chainscan.0g.ai | Minted 2026-05-04 |
 | 0G storage upload | planned | wallet `0x81e518...` has 0 OG | See `ZERO_G_STORAGE_STATUS.md` |
-| ENS mint-helper.eth | planned | name unregistered; Sepolia wallet unfunded | Script ready in `scripts/register_ens.py` |
-| ENS yield-router.eth | planned | name unregistered; Sepolia wallet unfunded | |
+| ENS mint-helper.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | Public Sepolia RPC: `https://rpc.sepolia.org`; fund `0x5373...6118`, dry-run, then register |
+| ENS yield-router.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | Same `scripts/register_ens.py` run as `mint-helper.eth` |
 | FDC attestation | fixture | demo proof hash; not a real XRPL tx | |
 | FAssets mint | fixture | stub tx params; no on-chain broadcast | |
 | Uniswap WETH/USDC quote | fixture | no API key set; pair unrelated to FXRP | |
