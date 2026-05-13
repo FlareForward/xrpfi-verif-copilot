@@ -1,246 +1,116 @@
-# XRPFi Verifiable Copilot
+# XRPFi Verifiable Copilot — Agent Receipt Explorer
 
 ![CI](https://github.com/FlareForward/xrpfi-verif-copilot/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
-
-> **0G Mainnet Contract:** [`0x01fE5698a2448d0fc336295df9977796030C79C4`](https://chainscan.0g.ai/address/0x01fE5698a2448d0fc336295df9977796030C79C4)  
-> **iNFT Demo Tx:** [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) — Token ID 1  
-> **Explorer:** https://chainscan.0g.ai
-
-A 2-agent AI system that helps XRP holders enter Flare DeFi end-to-end — with every decision verified on-chain and stored as an iNFT on 0G.
-
----
+**The flight recorder for AI finance. Every agent decision leaves a verifiable receipt.**
 
 ## What It Does
 
-XRP has millions of holders who want to earn yield but face a complex path: bridge to Flare, mint FXRP via FAssets, navigate DeFi venues, manage collateral. Our AI copilot walks them through all of it — and produces a verifiable audit trail so anyone can prove what the AI actually did.
+AI agents making financial decisions need to leave an audit trail. XRPFi produces a structured, inspectable receipt for every agent action: inputs, identity, decision, risk notes, proof status, and on-chain link. The receipt is permanent and clickable on 0G's explorer. This is the infrastructure pattern that serious agentic finance requires. One live on-chain artifact today; the pattern generalises.
 
-**The "oh wow" moment:** Watch an AI agent mint FXRP from a 100-XRP fixture, route it to the highest-yield venue, and produce an iNFT on 0G that any judge can click to verify every decision.
+## Live Proof
 
----
-
-## System Architecture
-
-```
-User → mint-helper.eth (Agent A, AXL node 1)
-            │ FAssets v1.3 mint + FDC attestation + FTSO pricing
-            │
-            ▼ Gensyn AXL (cross-node: node 1 → node 2)
-            │
-         yield-router.eth (Agent B, AXL node 2)
-            │ Flare DeFi venue catalog + Uniswap swap + rebalance policy
-            │
-            ▼
-      0G Storage → iNFT (ERC-7857) on 0G mainnet (Chain ID 16661)
-            │
-            ▼
-      chainscan.0g.ai — permanent, clickable proof
-```
-
-See [docs/architecture.md](docs/architecture.md) for full diagram.
-
----
-
-## Track Alignment — 0G APAC Hackathon
-
-**Track 2: Agentic Trading Arena / Verifiable Finance** — This project qualifies because:
-
-1. **AI agents executing financial operations**: Two Google ADK agents autonomously handle FXRP minting, yield routing, and swap execution.
-2. **Verifiable on-chain audit trail**: Every agent decision is stored on 0G decentralized storage and minted as an ERC-7857 iNFT — permanent, tamper-proof, clickable on `chainscan.0g.ai`.
-3. **0G as the trust layer**: 0G Storage + iNFT mint is not bolted on — it's the core verification primitive. Without 0G, the system has no verifiability story.
-4. **Real market**: XRP has 5M+ holders. FAssets v1.3 launched April 2026. The path from XRP to Flare DeFi yield exists and is underserved.
-
-| 0G Component | Integration |
-|---|---|
-| 0G Storage | Every `DecisionRecord` JSON uploaded via `ZeroGClient` |
-| ERC-7857 iNFT | Minted on 0G mainnet (Chain ID 16661) per session |
-| 0G Explorer | `chainscan.0g.ai` link in every iNFT — judge-clickable proof |
-
-See [DEPLOYMENT_ADDRESSES.md](DEPLOYMENT_ADDRESSES.md) for contract address and demo tx hash.
-
----
+- **0G iNFT:** token 1 — [chainscan.0g.ai](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd)
+- **FTSO prices:** live price data from `coston2-api.flare.network` on every run
+- **Reality check:** See [REALITY_MATRIX.md](REALITY_MATRIX.md) for the exact live/fixture/planned state of every integration.
 
 ## Quick Start
 
 ```bash
 pip install uv && uv pip install -e ".[dev]"
-cp .env.example .env          # add GOOGLE_API_KEY
-uv run python demo/judge_demo.py   # see docs/JUDGES_CHECKLIST.md for expected output
-```
-
-```bash
-# Browser UI
-uv run python web/server.py   # open http://localhost:8088
-```
-
-![Demo UI](docs/screenshots/ui-demo.png)
-
-## Docker
-
-```bash
 cp .env.example .env
-docker compose up xrpfi
+uv run python demo/judge_demo.py
 ```
 
-Open http://localhost:8088 for the browser UI.
+## Architecture
 
-```bash
-docker compose --profile judge run --rm judge
+```text
+User intent
+   |
+   v
+AI agent evaluates inputs
+   |
+   v
+DecisionRecord receipt
+   |-- agent identity
+   |-- FTSO price inputs
+   |-- decision and risk notes
+   |-- LIVE / FIXTURE / PLANNED proof status
+   |
+   v
+0G iNFT link
+   |
+   v
+chainscan.0g.ai
 ```
 
-The Compose setup uses `python:3.12-slim`, installs `uv` inside the container,
-mounts this repo at `/app`, and mounts `~/.xrpfi` for local XRPFi state.
+The product is the receipt: a compact record that lets a judge, user, or future protocol inspect what an AI agent saw, decided, and proved.
 
----
+## Receipt Format
 
-## 0G Integration
+Each agent action produces a `DecisionRecord` shaped around auditability:
 
-**SDK:** `pip install 0g-storage-sdk` (v0.2.1)
-
-The Orchestrator persists every `DecisionRecord` to 0G storage:
-
-```python
-from src.integrations.zero_g.client import ZeroGClient
-from src.integrations.zero_g.inft import INFTMinter
-
-# Upload decision record to 0G storage
-client = ZeroGClient(private_key=os.environ["ZERO_G_PRIVATE_KEY"])
-result = await client.upload_record(record)
-print(result.tx_hash)  # 0G Newton testnet tx
-
-# Mint iNFT bundling all records
-minter = INFTMinter(contract_address=INFT_CONTRACT, private_key=...)
-inft = await minter.mint_decision_log(records, recipient, storage_uri)
-print(inft.explorer_url)  # https://chainscan-newton.0g.ai/token/<id>
+```json
+{
+  "session_id": "demo-session-001",
+  "agent_name": "yield-router",
+  "agent_ens": "yield-router.eth",
+  "inputs": {
+    "ftso_prices": ["FLR/USD [LIVE]", "XRP/USD [LIVE]"],
+    "fdc_proof": "proof_hash=... [FIXTURE]",
+    "route_amount": "100 XRP"
+  },
+  "decision": {
+    "action_taken": "evaluate_yield_route",
+    "result_summary": "60% SparkDEX / 40% Kinetic [FIXTURE]",
+    "risk_notes": ["fixture route policy; no live DeFi call"]
+  },
+  "proof_status": {
+    "ftso": "live",
+    "zero_g_inft": "live",
+    "fdc": "fixture",
+    "zero_g_storage_upload": "planned"
+  },
+  "on_chain_link": "https://chainscan.0g.ai/tx/0xbe0cf7c8..."
+}
 ```
 
-**0G Mainnet:** RPC `https://evmrpc-mainnet.0g.ai`, Chain ID 16661  
-**Explorer:** https://chainscan.0g.ai/
+## Sponsor Integrations
 
----
+| Integration | State | Evidence | Notes |
+|---|---|---|---|
+| FTSO prices | live | hits `coston2-api.flare.network` on every run | Live data source for receipt inputs |
+| 0G iNFT (token 1) | live | [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) on chainscan.0g.ai | Minted 2026-05-04 |
+| 0G storage upload | planned | wallet `0x81e518...` has 0 OG | See [ZERO_G_STORAGE_STATUS.md](ZERO_G_STORAGE_STATUS.md) |
+| ENS mint-helper.eth | planned | name unregistered; Sepolia wallet unfunded | Script ready in `scripts/register_ens.py` |
+| ENS yield-router.eth | planned | name unregistered; Sepolia wallet unfunded | |
+| FDC attestation | fixture | demo proof hash; not a real XRPL tx | |
+| FAssets mint | fixture | stub tx params; no on-chain broadcast | |
+| Uniswap WETH/USDC quote | fixture | no API key set; pair unrelated to FXRP | |
+| Gensyn AXL | fixture | in-process `asyncio.Queue`; `force_fallback=True` | |
+| Yield routing | fixture | deterministic 60/40 policy; no live DeFi calls | |
 
-## ENS Integration
+The same table is maintained as the dedicated [Reality Matrix](REALITY_MATRIX.md).
 
-Both agents register as ENS names and resolve dynamically:
+## FlareForward / Apex Bridge
 
-```python
-from src.integrations.ens.resolver import EnsResolver
-
-resolver = EnsResolver()
-address = await resolver.resolve("mint-helper.eth")  # no hardcoded values
-```
-
-ENS names: `mint-helper.eth` and `yield-router.eth` (registered on Sepolia for demo).
-
----
-
-## Gensyn AXL Integration
-
-Two separate AXL nodes handle inter-agent communication:
-
-- **Node A** (mint-helper, port 8765): publishes to `xrpfi.mint.complete` after FXRP mint
-- **Node B** (yield-router, port 8766): subscribes to `xrpfi.mint.complete`, publishes `xrpfi.route.plan`
-
-```python
-# Node A — publishes after mint
-from src.gensyn.node_a.publisher import AxlPublisher
-publisher = AxlPublisher(endpoint="http://localhost:8765")
-msg_id = await publisher.publish_mint_complete(record)
-
-# Node B — subscribes and routes
-from src.gensyn.node_b.subscriber import AxlSubscriber
-subscriber = AxlSubscriber(endpoint="http://localhost:8766")
-await subscriber.subscribe_mint_complete(handler=on_mint_complete)
-```
-
-> **AXL note:** For demo, AXL nodes run on localhost. Production deployment uses separate
-> Gensyn network nodes. The communication protocol and topic-based routing are identical
-> in both modes.
-
----
-
-## Uniswap Integration
-
-Agent B uses Uniswap Trading API v2 for swap legs:
-
-```python
-from src.integrations.uniswap.client import UniswapClient
-
-client = UniswapClient(api_url="https://api.uniswap.org/v2")
-quote = await client.get_quote(
-    token_in="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",  # WETH
-    token_out="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",  # USDC
-    amount_in=1.0,
-    chain_id=1
-)
-```
-
-See [FEEDBACK.md](FEEDBACK.md) for devex notes and suggested improvements.
-
----
-
-## Flare Integration
-
-- **FTSO v2:** All prices fetched via `getFeedById()` on Flare Contract Registry. Feed ID + timestamp included in every decision record per Flare-First Data Policy.
-- **FDC Payment attestation:** XRP deposits verified via FDC `Payment` attestation type (XRPL → Flare proof).
-- **FAssets v1.3:** FXRP minting via AssetManager on Songbird testnet (launched Apr 28, 2026).
-
-```python
-from src.integrations.ftso.client import FtsoClient
-
-ftso = FtsoClient(rpc_url="https://coston2-api.flare.network/ext/C/rpc")
-prices = await ftso.get_prices(["FLR/USD", "XRP/USD"])
-# Every price includes: feed_id, feed_name, price_usd, decimals, timestamp
-```
-
----
-
-## Verifiable Decision Log
-
-Every agent action produces a `DecisionRecord` (Pydantic model, `src/contracts/decision_log.py`):
-
-- `agent_name` + `agent_ens` — which agent + ENS identity
-- `ftso_prices` — all FTSO prices used (with feed_id + timestamp)
-- `fdc_proof` — FDC attestation if cross-chain
-- `reasoning` — LLM or deterministic policy reasoning
-- `action_taken` + `result_summary` — what happened
-- `zero_g.storage_tx_hash` — 0G storage reference
-- `zero_g.inft_token_id` — iNFT token ID on 0G explorer
-
----
+This receipt pattern is directly relevant to FlareForward's work on Apex and agent-assisted DeFi. The primitive demonstrated here — structured, on-chain-linked agent receipts — is a building block for any system where AI agents manage real capital.
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -v --cov=src --cov-report=term-missing
+uv run --extra dev pytest tests/ -q
+uv run ruff check .
+uv run mypy --strict src/
 ```
 
-| Test file | What it covers |
-|-----------|---------------|
-| `test_decision_log.py` | PR-0 contract invariants (14 pins) |
-| `test_zero_g.py` | 0G storage + iNFT mint (13 pins) |
-| `test_mint_helper.py` | Agent A reasoning + DecisionRecord production |
-| `test_fassets.py` | FAssets v1.3 minting client |
-| `test_fdc.py` | FDC payment attestation |
-| `test_ftso.py` | FTSO v2 price feed reads |
-| `test_yield_router.py` | Agent B reasoning + route plan |
-| `test_rebalance_policy.py` | Deterministic policy coverage |
-| `test_uniswap.py` | Uniswap API client |
-| `test_integration.py` | End-to-end flow |
-
----
+Expected baseline for this repositioning cycle: 163 tests passing, ruff clean, and mypy strict clean.
 
 ## Team
 
 Built by **FlareForward** (Steven Hudspeth) for 0G APAC Hackathon 2026.
-
-- X/Twitter: *(add handle)*
-- Telegram: *(add)*
-
----
 
 ## License
 
