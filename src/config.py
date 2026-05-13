@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         description="Ethereum mainnet RPC for ENS resolution",
     )
     eth_sepolia_rpc_url: str = Field(
-        default="https://sepolia.infura.io/v3/",
+        default="https://rpc.sepolia.org",
         description="Ethereum Sepolia for ENS testnet registration",
     )
 

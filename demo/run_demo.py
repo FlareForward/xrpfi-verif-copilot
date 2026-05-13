@@ -47,6 +47,34 @@ DEMO_XRP_ADDRESS = "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59"  # example XRPL address
 DEMO_RECIPIENT = "0x81e51856d72023490cF7DEc1A6717f4269028F95"  # operator wallet
 
 
+def is_test_ens_address(address: str) -> bool:
+    """Return True when an address is one of the ENS fallback identities."""
+    from src.integrations.ens.resolver import TEST_ADDRESSES
+
+    return address.lower() in {fallback.lower() for fallback in TEST_ADDRESSES.values()}
+
+
+async def resolve_ens_identity(name: str) -> dict[str, str | bool]:
+    """Resolve an ENS identity and classify it as live or planned."""
+    from src.integrations.ens.resolver import TEST_ADDRESSES, EnsResolver
+
+    try:
+        address = await EnsResolver().resolve(name)
+    except Exception as exc:
+        log.warning("ens_fallback", name=name, reason=str(exc))
+        address = TEST_ADDRESSES.get(name, f"0xENS_DEMO_{name.replace('.eth', '').upper()}")
+    return {
+        "ens": name,
+        "address": address,
+        "is_live": not is_test_ens_address(address),
+    }
+
+
+def ens_status_label(agent: dict[str, Any]) -> str:
+    """Return the display label for a resolved ENS identity."""
+    return "[LIVE]" if agent.get("is_live") else "[PLANNED]"
+
+
 async def step_fetch_ftso_prices() -> list[FtsoPrice]:
     """Step 1: Fetch FTSO prices for FLR/USD and XRP/USD."""
     log.info("step", n=1, action="Fetching FTSO prices")
@@ -285,8 +313,8 @@ async def run_demo_flow() -> dict[str, Any]:
     ftso_prices = await step_fetch_ftso_prices()
 
     # 2. Resolve ENS names
-    mint_helper_addr = await step_resolve_ens("mint-helper.eth")
-    yield_router_addr = await step_resolve_ens("yield-router.eth")
+    mint_helper = await resolve_ens_identity("mint-helper.eth")
+    yield_router = await resolve_ens_identity("yield-router.eth")
 
     # 3. Attest XRP payment (FDC)
     attest_record = await step_attest_xrp_payment(
@@ -315,8 +343,8 @@ async def run_demo_flow() -> dict[str, Any]:
 
     return {
         "agents": [
-            {"ens": "mint-helper.eth", "address": mint_helper_addr},
-            {"ens": "yield-router.eth", "address": yield_router_addr},
+            mint_helper,
+            yield_router,
         ],
         "prices": [price.model_dump(mode="json") for price in ftso_prices],
         "xrp_amount": DEMO_XRP_AMOUNT,
@@ -344,8 +372,14 @@ def print_summary(result: dict[str, Any]) -> None:
     print("\n" + "=" * 70)
     print("  Agent Receipt Complete")
     print("=" * 70)
-    print(f"  Agents:        mint-helper.eth → {agents[0]['address'][:18]}... [PLANNED — ENS]")
-    print(f"                 yield-router.eth → {agents[1]['address'][:18]}... [PLANNED — ENS]")
+    print(
+        f"  Agents:        mint-helper.eth → {agents[0]['address'][:18]}... "
+        f"{ens_status_label(agents[0])}"
+    )
+    print(
+        f"                 yield-router.eth → {agents[1]['address'][:18]}... "
+        f"{ens_status_label(agents[1])}"
+    )
     xrp_price = ftso_prices[1]["price_usd"] if len(ftso_prices) > 1 else "n/a"
     print(f"  FTSO prices:   FLR/USD={ftso_prices[0]['price_usd']}, XRP/USD={xrp_price} [LIVE]")
     print(
