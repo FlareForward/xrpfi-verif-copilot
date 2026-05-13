@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # 0G storage
     zero_g_storage_url: str = Field(
         default="https://indexer-storage-turbo.0g.ai",
-        description="0G storage node endpoint",
+        description="0G mainnet turbo storage indexer base URL",
     )
     zero_g_rpc_url: str = Field(
         default="https://0g-rpc.publicnode.com",
