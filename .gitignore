@@ -2,6 +2,8 @@
 .env.*
 *.env
 *.env.txt
+env
+env.*
 __pycache__/
 *.pyc
 *.pyo
