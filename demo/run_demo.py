@@ -1,17 +1,17 @@
 """
-XRPFi Verifiable Copilot — End-to-End Demo Script
+XRPFi Verifiable Copilot — Agent Receipt Demo Script
 
-Walks through the full flow:
+Walks through the receipt-producing demo flow:
   1. mint-helper.eth resolves via ENS
   2. FTSO prices fetched (FLR/USD + XRP/USD)
   3. XRP payment attested via FDC
   4. FXRP minted via FAssets v1.3 on Songbird testnet
   5. AXL message sent from Agent A to Agent B (Gensyn AXL node 1 → node 2)
   6. yield-router.eth receives message, recommends yield allocation
-  7. Uniswap API called for swap leg
-  8. All decisions persisted to 0G storage
-  9. iNFT minted on 0G Galileo testnet
-  10. Explorer URL printed
+  7. Uniswap quote displayed with LIVE/FIXTURE status
+  8. Decision receipt persisted to 0G storage when funded
+  9. iNFT proof artifact displayed
+  10. Receipt audit trail printed
 
 Run:
   python demo/run_demo.py
@@ -330,7 +330,7 @@ async def run_demo_flow() -> dict[str, Any]:
 def print_banner() -> None:
     """Print the terminal demo banner."""
     print("\n" + "=" * 70)
-    print("  XRPFi Verifiable Copilot — End-to-End Demo")
+    print("  Agent Receipt — XRPFi Verifiable Copilot")
     print("  0G APAC Hackathon 2026 | by FlareForward")
     print("=" * 70 + "\n")
 
@@ -342,17 +342,24 @@ def print_summary(result: dict[str, Any]) -> None:
     tx_hashes = result["storage_hashes"]
     inft_url = result["inft_url"]
     print("\n" + "=" * 70)
-    print("  Demo Complete")
+    print("  Agent Receipt Complete")
     print("=" * 70)
-    print(f"  Agents:        mint-helper.eth → {agents[0]['address'][:18]}...")
-    print(f"                 yield-router.eth → {agents[1]['address'][:18]}...")
+    print(f"  Agents:        mint-helper.eth → {agents[0]['address'][:18]}... [PLANNED — ENS]")
+    print(f"                 yield-router.eth → {agents[1]['address'][:18]}... [PLANNED — ENS]")
     xrp_price = ftso_prices[1]["price_usd"] if len(ftso_prices) > 1 else "n/a"
-    print(f"  FTSO prices:   FLR/USD={ftso_prices[0]['price_usd']}, XRP/USD={xrp_price}")
-    print(f"  XRP minted:    {result['xrp_amount']} XRP → {result['fxrp_minted']:.2f} FXRP")
-    print(f"  Decisions:     {len(result['decisions'])} records persisted to 0G")
-    print(f"  0G storage:    {tx_hashes[0][:40] if tx_hashes else 'demo'}...")
-    print(f"  iNFT:          {inft_url}")
-    print(f"\n  ✅ Verifiable audit trail: {inft_url}\n")
+    print(f"  FTSO prices:   FLR/USD={ftso_prices[0]['price_usd']}, XRP/USD={xrp_price} [LIVE]")
+    print(
+        f"  XRP route:     {result['xrp_amount']} XRP → "
+        f"{result['fxrp_minted']:.2f} FXRP [FIXTURE — no FAssets broadcast]"
+    )
+    print(f"  Decisions:     {len(result['decisions'])} receipt records [LIVE]")
+    print(
+        "  0G storage:    "
+        f"{tx_hashes[0][:40] if tx_hashes else 'local SHA-256 receipt only'} "
+        "[PLANNED — wallet funding required]"
+    )
+    print(f"  iNFT:          {inft_url} [LIVE]")
+    print(f"\n  Verifiable audit trail: {inft_url} [LIVE]\n")
 
 
 async def main() -> None:

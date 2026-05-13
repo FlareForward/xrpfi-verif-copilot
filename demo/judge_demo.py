@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import re
@@ -41,6 +42,13 @@ COORD_DOC = Path.home() / "codex-coord" / "xrpfi-storage-demo-20260505.md"
 INFT_TOKEN_ID = "1"
 INFT_TX = "0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd"
 UNISWAP_FIXTURE_USDC = 2341.22
+FDC_FIXTURE_PAYLOAD = {
+    "attestation_type": "Payment",
+    "chain": "XRPL",
+    "amount_xrp": DEMO_XRP_AMOUNT,
+    "from_address": "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59",
+    "to_address": "rFassetsMintAddress1234567890",
+}
 StepCallback = Callable[[dict[str, Any]], None]
 
 
@@ -236,10 +244,9 @@ async def run_axl_receipt(
 
 
 async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str, Any]:
-    """Run the full judge demo flow and print numbered proof lines."""
+    """Run the full judge demo flow and print a structured receipt."""
     suppress_demo_logging()
     started_at = datetime_now_iso()
-    print_header()
     steps: list[dict[str, Any]] = []
 
     fallback_prices = []
@@ -340,13 +347,13 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
     )
 
     quote_amount, is_live_quote = await fetch_uniswap_quote()
-    quote_suffix = "live" if is_live_quote else "fixture — set UNISWAP_API_KEY"
     emit_step(
         steps,
         step_callback,
         7,
         "Uniswap quote",
-        f"WETH→USDC: 1.0 WETH = {quote_amount:,.2f} USDC ({quote_suffix})",
+        f"WETH→USDC: 1.0 WETH = {quote_amount:,.2f} USDC",
+        None if is_live_quote else "no API key or live quote unavailable",
     )
 
     axl_receipt, axl_error = await run_axl_receipt(mint_record, fxrp_minted)
@@ -389,8 +396,21 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
         inft_error,
     )
 
-    print_footer(inft_url)
     session = save_session(steps, records, started_at=started_at)
+    print_receipt(
+        session_id=str(session["session_id"]),
+        timestamp=str(session["timestamp"]),
+        flr_usd=flr_usd,
+        xrp_usd=xrp_usd,
+        ftso_live=price_note is None,
+        fdc_proof_hash=fixture_fdc_proof_hash(),
+        uniswap_quote=quote_amount,
+        uniswap_live=is_live_quote,
+        fxrp_minted=fxrp_minted,
+        axl_receipt=axl_receipt,
+        storage_tx=storage_tx,
+        inft_url=inft_url,
+    )
     return {
         "agents": [
             {"ens": "mint-helper.eth", "address": mint_helper},
@@ -409,19 +429,16 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
 
 
 def print_header() -> None:
-    """Print the judge demo header."""
-    print("=" * 60)
-    print("  XRPFi Verifiable Copilot - Judge Demo")
-    print("  0G APAC Hackathon 2026 | FlareForward")
-    print(f"  {GITHUB_URL}")
-    print("=" * 60)
+    """Print the receipt header."""
+    print("╔══════════════════════════════════════════════════════╗")
+    print("║  Agent Receipt — XRPFi Verifiable Copilot            ║")
+    print("║  0G APAC Hackathon 2026 | FlareForward               ║")
+    print("╚══════════════════════════════════════════════════════╝")
     print()
 
 
 def print_line(index: int, label: str, message: str, warning: str | None = None) -> None:
-    """Print a single numbered judge line."""
-    suffix = f"  ⚠ fallback ({clean_warning(warning)})" if warning else ""
-    print(f"[{index}] {label:<18} {message}{suffix}")
+    """No-op terminal printer kept for browser step compatibility."""
 
 
 def emit_step(
@@ -432,8 +449,7 @@ def emit_step(
     message: str,
     warning: str | None = None,
 ) -> None:
-    """Print a judge line and optionally stream the same step to the browser."""
-    print_line(index, label, message, warning)
+    """Record a demo step and optionally stream it to the browser."""
     event = {
         "step": index,
         "label": label,
@@ -459,12 +475,114 @@ def clean_warning(warning: str) -> str:
 
 
 def print_footer(audit_url: str) -> None:
-    """Print the judge demo footer."""
+    """Print the audit trail footer."""
+    print("── Verifiable audit trail ─────────────────────────────")
+    print(f"{audit_url}  {status_label('LIVE')}")
+    print(f"GitHub: {GITHUB_URL}  {status_label('LIVE')}")
+
+
+def print_receipt(
+    *,
+    session_id: str,
+    timestamp: str,
+    flr_usd: float,
+    xrp_usd: float,
+    ftso_live: bool,
+    fdc_proof_hash: str,
+    uniswap_quote: float,
+    uniswap_live: bool,
+    fxrp_minted: float,
+    axl_receipt: str,
+    storage_tx: str | None,
+    inft_url: str,
+) -> None:
+    """Print the judge-facing agent receipt."""
+    print_header()
+    print(f"Receipt ID:    {session_id}  {status_label('LIVE')}")
+    print(f"Timestamp:     {timestamp}  {status_label('LIVE')}")
+    print(
+        "Agent:         mint-helper.eth → yield-router.eth  "
+        f"{status_label('PLANNED', 'ENS names unregistered; demo identities')}"
+    )
     print()
-    print("=" * 60)
-    print(f"  Verifiable audit trail: {audit_url}")
-    print(f"  GitHub: {GITHUB_URL}")
-    print("=" * 60)
+    print("── Data Inputs ─────────────────────────────────────────")
+    ftso_status = (
+        status_label("LIVE")
+        if ftso_live
+        else status_label("FIXTURE", "fallback price feed stale or unavailable")
+    )
+    print(f"FTSO FLR/USD:  {flr_usd:.4f}  {ftso_status}")
+    print(f"FTSO XRP/USD:  {xrp_usd:.2f}    {ftso_status}")
+    print(
+        f"FDC proof:     proof_hash={fdc_proof_hash}  "
+        f"{status_label('FIXTURE', 'demo attestation, not live XRPL')}"
+    )
+    quote_status = (
+        status_label("LIVE")
+        if uniswap_live
+        else status_label("FIXTURE", "no API key or live quote unavailable")
+    )
+    print(f"Uniswap quote: {uniswap_quote:,.2f} {quote_status}")
+    print()
+    print("── Decision ────────────────────────────────────────────")
+    print(
+        f"Action:        Evaluate yield route for {DEMO_XRP_AMOUNT:.0f} XRP  "
+        f"{status_label('FIXTURE', 'demo scenario')}"
+    )
+    print(
+        "Route:         60% SparkDEX / 40% Kinetic  "
+        f"{status_label('FIXTURE', 'policy rule')}"
+    )
+    print(
+        f"FAssets mint:  Stub params returned for ~{fxrp_minted:.2f} FXRP  "
+        f"{status_label('FIXTURE', 'no broadcast')}"
+    )
+    print()
+    print("── Cross-Agent Handoff ─────────────────────────────────")
+    axl_summary = axl_receipt.splitlines()[0].replace("✓", "").strip()
+    axl_status = status_label(
+        "FIXTURE",
+        "local AXL-compatible fallback; real Gensyn node not connected",
+    )
+    print(
+        f"Gensyn AXL:    {axl_summary}  "
+        f"{axl_status}"
+    )
+    print()
+    print("── Proof Artifacts ─────────────────────────────────────")
+    storage_label = (
+        status_label("LIVE")
+        if real_tx_hash(storage_tx)
+        else status_label("PLANNED", "wallet unfunded; see ZERO_G_STORAGE_STATUS.md")
+    )
+    storage_display = (
+        f"tx={storage_tx} {ZERO_G_EXPLORER}/tx/{storage_tx}"
+        if real_tx_hash(storage_tx)
+        else "local SHA-256 receipt only"
+    )
+    print(f"0G storage:    {storage_display}  {storage_label}")
+    print(f"0G iNFT:       token={INFT_TOKEN_ID} {inft_url}  {status_label('LIVE')}")
+    print()
+    print_footer(inft_url)
+
+
+def fixture_fdc_proof_hash() -> str:
+    """Return the displayed SHA-256 proof for the FDC fixture payload."""
+    payload = json.dumps(FDC_FIXTURE_PAYLOAD, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def status_label(kind: str, reason: str | None = None) -> str:
+    """Return a status label, colored when the terminal supports ANSI."""
+    text = f"[{kind} — {reason}]" if reason else f"[{kind}]"
+    if not sys.stdout.isatty():
+        return text
+    colors = {
+        "LIVE": "\033[32m",
+        "FIXTURE": "\033[33m",
+        "PLANNED": "\033[90m",
+    }
+    return f"{colors.get(kind, '')}{text}\033[0m"
 
 
 def main(step_callback: StepCallback | None = None) -> dict[str, Any] | None:
