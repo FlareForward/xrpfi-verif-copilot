@@ -1,6 +1,6 @@
 [project]
 name = "xrpfi-verif-copilot"
-version = "2.5.0"
+version = "2.6.0"
 description = "XRPFi Verifiable Copilot — 2-agent system for XRP holders entering Flare DeFi"
 readme = "README.md"
 license = "MIT"

@@ -4,51 +4,52 @@ Date: 2026-05-13
 
 ## Summary
 
-Mainnet storage upload is in the final live-fix cycle. The previous blocker
-was an unfunded wallet, but the configured 0G wallet is now funded and ready
-for an end-to-end storage transaction.
+0G mainnet storage upload is live for the XRPFi judge receipt.
 
 - Chain ID: `16661`
 - RPC: `https://0g-rpc.publicnode.com`
+- Storage indexer: `https://indexer-storage-turbo.0g.ai`
 - Wallet: `0x53730993203f21b9ac8d10a8CA5CA5d92b036118`
-- Wallet balance: `8.75 OG`
 - Flow contract: `0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526`
+- Storage transaction:
+  `0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9`
+- Explorer:
+  `https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9`
 
-Storage is not marked live until the current cycle records a real mainnet
-storage transaction hash from `make judge`.
+Receipt verification confirmed the transaction succeeded on 0G mainnet in
+block `33162228`, from wallet `0x53730993203f21b9ac8d10a8CA5CA5d92b036118`
+to the Flow contract.
 
-## Current Root Cause
+## Root Cause Fixed
 
-Two independent blockers were identified on 2026-05-13:
+Two independent blockers were fixed:
 
-1. The Node upload helper passes `fee: 0n` into the 0G TypeScript SDK. The
-   FixedPriceFlow contract requires `msg.value >= price`, so the submit
-   transaction reverts during gas estimation.
-2. The HTTP fallback points at `https://indexer-storage-turbo.0g.ai`, which
-   returns `HTTP 404` for the mainnet upload path.
+1. The upload helper previously sent `fee: 0n`. It now queries the Flow market
+   price and sends a positive storage fee with the transaction.
+2. The bundled TypeScript SDK expected the older Flow ABI. The helper now uses
+   the live Flow ABI with the `data` plus `submitter` submission wrapper, while
+   keeping the SDK's file, indexer, and uploader flow.
 
-## Fix In Progress
+The Python HTTP fallback also now posts to the mainnet indexer's `/file/segment`
+path and returns explicit local proof only when live upload is unavailable.
 
-- Lane A owns the SDK/Flow-contract fee calculation in
-  `contracts/storage_upload/upload.mjs`.
-- Lane B owns the correct mainnet storage indexer URL and Python HTTP fallback
-  path.
-- The orchestrator owns this status file, `REALITY_MATRIX.md`, final
-  integration, and the `v2.6.0-storage-live` tag.
-
-## Live Acceptance Criteria
-
-Storage becomes live only when all of the following are true:
+## Verification
 
 ```bash
+node --check contracts/storage_upload/upload.mjs
+uv run ruff check src/ tests/ demo/
+uv run mypy src/ --strict
 uv run pytest tests/ -q
-make judge
+make update-deployment UPDATE_DEPLOYMENT_ARGS='--storage-tx 0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9 --write'
 ```
 
-The judge run must produce a real storage transaction hash matching
-`0x` plus 64 hex characters, not a `local://` fallback or fixture hash.
+Observed gate result: `170 passed`.
 
-## Pending Evidence
+Live transaction receipt:
 
-The real transaction hash will be recorded here after Lane A and Lane B merge
-and the orchestrator reruns the integration flow.
+```text
+tx:     0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9
+status: 1
+block:  33162228
+gas:    339202
+```

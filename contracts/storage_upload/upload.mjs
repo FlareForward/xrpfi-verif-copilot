@@ -11,7 +11,6 @@
 
 import {
   calculatePrice,
-  getFlowContract,
   getMarketContract,
   Indexer,
   Uploader,
@@ -28,16 +27,22 @@ const FLOW_CONTRACT = process.env.ZERO_G_FLOW_CONTRACT
   || "0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526";
 const UPLOAD_TAGS = "0x";
 
+const LIVE_FLOW_ABI = [
+  "function market() view returns (address)",
+  "function submit(((uint256 length, bytes tags, (bytes32 root, uint256 height)[] nodes) data, address submitter) submission) payable returns (uint256 index, bytes32 digest, uint256 startIndex, uint256 length)",
+  "event Submit(address indexed sender, bytes32 indexed identity, uint256 submissionIndex, uint256 startPos, uint256 length, (uint256 length, bytes tags, (bytes32 root, uint256 height)[] nodes) submission)",
+];
+
 async function estimateStorageFee(file, flow, provider) {
-  const [submission, submissionErr] = await file.createSubmission(UPLOAD_TAGS);
-  if (submissionErr || !submission) {
+  const [submissionData, submissionErr] = await file.createSubmission(UPLOAD_TAGS);
+  if (submissionErr || !submissionData) {
     throw new Error(`Submission error: ${submissionErr || "empty submission"}`);
   }
 
   const marketAddress = await flow.market();
   const market = getMarketContract(marketAddress, provider);
   const pricePerSector = await market.pricePerSector();
-  const fee = calculatePrice(submission, pricePerSector);
+  const fee = calculatePrice(submissionData, pricePerSector);
   if (fee <= 0n) {
     throw new Error(
       `Calculated non-positive 0G storage fee ${fee} from market ${marketAddress}`,
@@ -45,6 +50,17 @@ async function estimateStorageFee(file, flow, provider) {
   }
 
   return { fee, marketAddress, pricePerSector };
+}
+
+function patchSubmissionForLiveFlow(file, submitter) {
+  const createSubmissionData = file.createSubmission.bind(file);
+  file.createSubmission = async (tags) => {
+    const [data, err] = await createSubmissionData(tags);
+    if (err || !data) {
+      return [data, err];
+    }
+    return [{ data, submitter }, null];
+  };
 }
 
 async function upload(filePath, privateKey) {
@@ -77,12 +93,13 @@ async function upload(filePath, privateKey) {
     const [clients, nodeErr] = await indexer.selectNodes(1);
     if (nodeErr) throw new Error(`Node selection error: ${nodeErr}`);
 
-    const flow = getFlowContract(FLOW_CONTRACT, signer);
+    const flow = new ethers.Contract(FLOW_CONTRACT, LIVE_FLOW_ABI, signer);
     const { fee, marketAddress, pricePerSector } = await estimateStorageFee(
       file,
       flow,
       provider,
     );
+    patchSubmissionForLiveFlow(file, signer.address);
     const uploader = new Uploader(clients, EVM_RPC, flow);
     const [uploadResult, uploadErr] = await uploader.uploadFile(file, {
       tags: UPLOAD_TAGS,
