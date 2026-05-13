@@ -19,12 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from demo.run_demo import (  # noqa: E402
     DEMO_XRP_AMOUNT,
+    ens_status_label,
+    resolve_ens_identity,
     step_attest_xrp_payment,
     step_fetch_ftso_prices,
     step_mint_fxrp,
     step_mint_inft,
     step_persist_to_zero_g,
-    step_resolve_ens,
     step_route_yield,
 )
 from src.config import get_settings  # noqa: E402
@@ -265,29 +266,39 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
 
     mint_helper, mint_ens_error = await safe_step(
         "mint-helper ENS",
-        lambda: step_resolve_ens("mint-helper.eth"),
-        "0x81e51856d72023490cF7DEc1A6717f4269028F95",
+        lambda: resolve_ens_identity("mint-helper.eth"),
+        {
+            "ens": "mint-helper.eth",
+            "address": "0x81e51856d72023490cF7DEc1A6717f4269028F95",
+            "is_live": False,
+        },
     )
     emit_step(
         steps,
         step_callback,
         2,
         "ENS resolved",
-        f"mint-helper.eth -> {short_address(mint_helper)}",
+        f"mint-helper.eth -> {short_address(str(mint_helper['address']))} "
+        f"{ens_status_label(mint_helper)}",
         mint_ens_error,
     )
 
     yield_router, yield_ens_error = await safe_step(
         "yield-router ENS",
-        lambda: step_resolve_ens("yield-router.eth"),
-        "0x81e51856d72023490cF7DEc1A6717f4269028F95",
+        lambda: resolve_ens_identity("yield-router.eth"),
+        {
+            "ens": "yield-router.eth",
+            "address": "0x81e51856d72023490cF7DEc1A6717f4269028F95",
+            "is_live": False,
+        },
     )
     emit_step(
         steps,
         step_callback,
         3,
         "ENS resolved",
-        f"yield-router.eth -> {short_address(yield_router)}",
+        f"yield-router.eth -> {short_address(str(yield_router['address']))} "
+        f"{ens_status_label(yield_router)}",
         yield_ens_error,
     )
 
@@ -410,11 +421,12 @@ async def run_judge_demo(step_callback: StepCallback | None = None) -> dict[str,
         axl_receipt=axl_receipt,
         storage_tx=storage_tx,
         inft_url=inft_url,
+        agents=[mint_helper, yield_router],
     )
     return {
         "agents": [
-            {"ens": "mint-helper.eth", "address": mint_helper},
-            {"ens": "yield-router.eth", "address": yield_router},
+            mint_helper,
+            yield_router,
         ],
         "prices": [price.model_dump(mode="json") for price in prices],
         "xrp_amount": DEMO_XRP_AMOUNT,
@@ -495,14 +507,16 @@ def print_receipt(
     axl_receipt: str,
     storage_tx: str | None,
     inft_url: str,
+    agents: list[dict[str, Any]],
 ) -> None:
     """Print the judge-facing agent receipt."""
     print_header()
     print(f"Receipt ID:    {session_id}  {status_label('LIVE')}")
     print(f"Timestamp:     {timestamp}  {status_label('LIVE')}")
     print(
-        "Agent:         mint-helper.eth → yield-router.eth  "
-        f"{status_label('PLANNED', 'ENS names unregistered; demo identities')}"
+        "Agent:         "
+        f"mint-helper.eth {ens_status_label(agents[0])} → "
+        f"yield-router.eth {ens_status_label(agents[1])}"
     )
     print()
     print("── Data Inputs ─────────────────────────────────────────")
