@@ -22,7 +22,7 @@
 | iNFT token ID | `1` |
 | iNFT explorer URL | https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd |
 | FTSO prices (live) | FLR/USD=0.0076298, XRP/USD=1.409773 (fetched live from Flare FTSO v2) |
-| 0G Storage | Simulated hashes (0G mainnet storage node returning 503 at time of demo) |
+| 0G Storage | `0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9` (https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9) |
 
 ---
 

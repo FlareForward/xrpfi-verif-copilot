@@ -1,60 +1,55 @@
 # 0G Storage Mainnet Status
 
-Date: 2026-05-05
+Date: 2026-05-13
 
 ## Summary
 
-Mainnet storage upload now targets the documented 0G mainnet Flow contract:
+0G mainnet storage upload is live for the XRPFi judge receipt.
 
 - Chain ID: `16661`
 - RPC: `https://0g-rpc.publicnode.com`
 - Storage indexer: `https://indexer-storage-turbo.0g.ai`
+- Wallet: `0x53730993203f21b9ac8d10a8CA5CA5d92b036118`
 - Flow contract: `0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526`
+- Storage transaction:
+  `0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9`
+- Explorer:
+  `https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9`
 
-The previous Galileo/testnet Flow contract is no longer used by the upload helper. The helper now pins the mainnet Flow contract instead of trusting storage-node status metadata.
+Receipt verification confirmed the transaction succeeded on 0G mainnet in
+block `33162228`, from wallet `0x53730993203f21b9ac8d10a8CA5CA5d92b036118`
+to the Flow contract.
 
-## Upload Test Result
+## Root Cause Fixed
 
-Command:
+Two independent blockers were fixed:
 
-```bash
-uv run python demo/run_demo.py 2>&1 | grep -E "storage|tx_hash|0x|Upload|error|revert|0G"
-```
+1. The upload helper previously sent `fee: 0n`. It now queries the Flow market
+   price and sends a positive storage fee with the transaction.
+2. The bundled TypeScript SDK expected the older Flow ABI. The helper now uses
+   the live Flow ABI with the `data` plus `submitter` submission wrapper, while
+   keeping the SDK's file, indexer, and uploader flow.
 
-Result: upload reached the correct mainnet Flow contract but did not produce a live storage transaction because the configured 0G wallet lacks enough OG for the storage fee plus gas.
+The Python HTTP fallback also now posts to the mainnet indexer's `/file/segment`
+path and returns explicit local proof only when live upload is unavailable.
 
-Observed error:
-
-```text
-Upload error: Failed to submit transaction: insufficient funds for transfer
-to: 0x62d4144db0f0a6fbbaeb6296c785c71b3d57c526
-```
-
-The HTTP `/upload` fallback on `https://indexer-storage-turbo.0g.ai` returned `HTTP 404`, so the client correctly fell back to explicit local proof hashes instead of claiming a fake live upload.
-
-## What Was Changed
-
-- `contracts/storage_upload/upload.mjs` now pins `ZERO_G_FLOW_CONTRACT` to the documented mainnet Flow contract.
-- `src/integrations/zero_g/client.py` now passes the runtime RPC, indexer, explorer, chain ID, and Flow contract into the Node helper process.
-- `src/config.py` now exposes `zero_g_flow_contract`.
-- `.env.example` now documents mainnet 0G storage defaults instead of Galileo/testnet values.
-
-## Remaining Blocker
-
-Fund the configured 0G wallet on chain `16661`, then rerun:
+## Verification
 
 ```bash
-uv run python demo/run_demo.py 2>&1 | grep -E "storage|tx_hash|0x"
+node --check contracts/storage_upload/upload.mjs
+uv run ruff check src/ tests/ demo/
+uv run mypy src/ --strict
+uv run pytest tests/ -q
+make update-deployment UPDATE_DEPLOYMENT_ARGS='--storage-tx 0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9 --write'
 ```
 
-Expected success signal:
+Observed gate result: `170 passed`.
+
+Live transaction receipt:
 
 ```text
-0G TS SDK upload success: root=0x... tx=0x...
-```
-
-Until the wallet is funded, judge-facing output should label storage as a fallback:
-
-```text
-0G storage: fallback (mainnet upload pending — see ZERO_G_STORAGE_STATUS.md)
+tx:     0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9
+status: 1
+block:  33162228
+gas:    339202
 ```

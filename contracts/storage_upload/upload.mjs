@@ -9,7 +9,13 @@
  * 0G mainnet defaults. Override with ZERO_G_RPC_URL, ZERO_G_STORAGE_URL, ZERO_G_EXPLORER.
  */
 
-import { getFlowContract, Indexer, Uploader, ZgFile } from "@0glabs/0g-ts-sdk";
+import {
+  calculatePrice,
+  getMarketContract,
+  Indexer,
+  Uploader,
+  ZgFile,
+} from "@0glabs/0g-ts-sdk";
 import { ethers } from "ethers";
 import path from "path";
 
@@ -19,6 +25,43 @@ const EXPLORER = process.env.ZERO_G_EXPLORER || "https://chainscan.0g.ai";
 const EXPECTED_CHAIN_ID = BigInt(process.env.ZERO_G_CHAIN_ID || "16661");
 const FLOW_CONTRACT = process.env.ZERO_G_FLOW_CONTRACT
   || "0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526";
+const UPLOAD_TAGS = "0x";
+
+const LIVE_FLOW_ABI = [
+  "function market() view returns (address)",
+  "function submit(((uint256 length, bytes tags, (bytes32 root, uint256 height)[] nodes) data, address submitter) submission) payable returns (uint256 index, bytes32 digest, uint256 startIndex, uint256 length)",
+  "event Submit(address indexed sender, bytes32 indexed identity, uint256 submissionIndex, uint256 startPos, uint256 length, (uint256 length, bytes tags, (bytes32 root, uint256 height)[] nodes) submission)",
+];
+
+async function estimateStorageFee(file, flow, provider) {
+  const [submissionData, submissionErr] = await file.createSubmission(UPLOAD_TAGS);
+  if (submissionErr || !submissionData) {
+    throw new Error(`Submission error: ${submissionErr || "empty submission"}`);
+  }
+
+  const marketAddress = await flow.market();
+  const market = getMarketContract(marketAddress, provider);
+  const pricePerSector = await market.pricePerSector();
+  const fee = calculatePrice(submissionData, pricePerSector);
+  if (fee <= 0n) {
+    throw new Error(
+      `Calculated non-positive 0G storage fee ${fee} from market ${marketAddress}`,
+    );
+  }
+
+  return { fee, marketAddress, pricePerSector };
+}
+
+function patchSubmissionForLiveFlow(file, submitter) {
+  const createSubmissionData = file.createSubmission.bind(file);
+  file.createSubmission = async (tags) => {
+    const [data, err] = await createSubmissionData(tags);
+    if (err || !data) {
+      return [data, err];
+    }
+    return [{ data, submitter }, null];
+  };
+}
 
 async function upload(filePath, privateKey) {
   // Provider + signer
@@ -37,50 +80,61 @@ async function upload(filePath, privateKey) {
     throw new Error(`No OG balance at ${signer.address} on chain ${network.chainId}`);
   }
 
-  // Open file
   const file = await ZgFile.fromFilePath(filePath);
-  const [tree, treeErr] = await file.merkleTree();
-  if (treeErr) throw new Error(`Merkle tree error: ${treeErr}`);
+  try {
+    const [tree, treeErr] = await file.merkleTree();
+    if (treeErr) throw new Error(`Merkle tree error: ${treeErr}`);
 
-  const rootHash = tree.rootHash();
+    const rootHash = tree.rootHash();
 
-  // Upload via indexer, but pin the mainnet Flow contract explicitly. Some
-  // storage nodes can report stale Galileo/testnet flow addresses in status.
-  const indexer = new Indexer(INDEXER);
-  const [clients, nodeErr] = await indexer.selectNodes(1);
-  if (nodeErr) throw new Error(`Node selection error: ${nodeErr}`);
+    // Upload via indexer, but pin the mainnet Flow contract explicitly. Some
+    // storage nodes can report stale Galileo/testnet flow addresses in status.
+    const indexer = new Indexer(INDEXER);
+    const [clients, nodeErr] = await indexer.selectNodes(1);
+    if (nodeErr) throw new Error(`Node selection error: ${nodeErr}`);
 
-  const flow = getFlowContract(FLOW_CONTRACT, signer);
-  const uploader = new Uploader(clients, EVM_RPC, flow);
-  const [uploadResult, uploadErr] = await uploader.uploadFile(file, {
-    tags: "0x",
-    finalityRequired: true,
-    taskSize: 10,
-    expectedReplica: 1,
-    skipTx: false,
-    fee: 0n,
-  });
-  if (uploadErr) throw new Error(`Upload error: ${uploadErr}`);
+    const flow = new ethers.Contract(FLOW_CONTRACT, LIVE_FLOW_ABI, signer);
+    const { fee, marketAddress, pricePerSector } = await estimateStorageFee(
+      file,
+      flow,
+      provider,
+    );
+    patchSubmissionForLiveFlow(file, signer.address);
+    const uploader = new Uploader(clients, EVM_RPC, flow);
+    const [uploadResult, uploadErr] = await uploader.uploadFile(file, {
+      tags: UPLOAD_TAGS,
+      finalityRequired: true,
+      taskSize: 10,
+      expectedReplica: 1,
+      skipTx: false,
+      fee,
+    });
+    if (uploadErr) throw new Error(`Upload error: ${uploadErr}`);
 
-  await file.close();
-  const txHash = typeof uploadResult === "string" ? uploadResult : uploadResult?.txHash;
-  const uploadedRoot = typeof uploadResult === "object" && uploadResult?.rootHash
-    ? uploadResult.rootHash
-    : rootHash;
-  if (!txHash) {
-    throw new Error(`Upload completed without a transaction hash for root ${uploadedRoot}`);
+    const txHash = typeof uploadResult === "string" ? uploadResult : uploadResult?.txHash;
+    const uploadedRoot = typeof uploadResult === "object" && uploadResult?.rootHash
+      ? uploadResult.rootHash
+      : rootHash;
+    if (!txHash) {
+      throw new Error(`Upload completed without a transaction hash for root ${uploadedRoot}`);
+    }
+
+    return {
+      root_hash: uploadedRoot,
+      tx_hash: txHash,
+      explorer_url: `${EXPLORER}/tx/${txHash || rootHash}`,
+      storage_scan_url: `https://storagescan.0g.ai/file?cid=${uploadedRoot}`,
+      indexer_url: INDEXER,
+      rpc_url: EVM_RPC,
+      flow_contract: FLOW_CONTRACT,
+      market_contract: marketAddress,
+      storage_fee_wei: fee.toString(),
+      price_per_sector_wei: pricePerSector.toString(),
+      chain_id: network.chainId.toString(),
+    };
+  } finally {
+    await file.close();
   }
-
-  return {
-    root_hash: uploadedRoot,
-    tx_hash: txHash,
-    explorer_url: `${EXPLORER}/tx/${txHash || rootHash}`,
-    storage_scan_url: `https://storagescan.0g.ai/file?cid=${uploadedRoot}`,
-    indexer_url: INDEXER,
-    rpc_url: EVM_RPC,
-    flow_contract: FLOW_CONTRACT,
-    chain_id: network.chainId.toString(),
-  };
 }
 
 // CLI entrypoint

@@ -24,6 +24,7 @@ The live anchors are intentionally narrow: a real 0G iNFT and live FTSO price re
 |---|---|---|---|
 | 0G iNFT Contract (ERC-7857) | live | `0x01fE5698a2448d0fc336295df9977796030C79C4` | [chainscan.0g.ai/address/0x01fE5698...](https://chainscan.0g.ai/address/0x01fE5698a2448d0fc336295df9977796030C79C4) |
 | iNFT Mint Tx | live | `0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd` | [chainscan.0g.ai/tx/0xbe0cf7c8...](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) |
+| 0G Storage Tx | `0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9` | [chainscan.0g.ai/tx/0x9128916b...](https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9) |
 | Token ID | live | `1` | [chainscan.0g.ai/tx/0xbe0cf7c8...](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) |
 | FTSO price reads | live | `FLR/USD`, `XRP/USD` from `coston2-api.flare.network` | Runtime output |
 | Reality Matrix | source of truth | [REALITY_MATRIX.md](../REALITY_MATRIX.md) | Exact live/fixture/planned state |
@@ -70,7 +71,7 @@ Route:         60% SparkDEX / 40% Kinetic [FIXTURE — policy rule]
 FAssets mint:  Stub params returned [FIXTURE — no broadcast]
 
 Proof Artifacts
-0G storage:    [PLANNED — wallet unfunded; see ZERO_G_STORAGE_STATUS.md]
+0G storage:    tx=0x9128916b... https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9 [LIVE]
 0G iNFT:       token=1 https://chainscan.0g.ai/tx/0xbe0cf7c8... [LIVE]
 ```
 
@@ -80,7 +81,7 @@ Proof Artifacts
 |---|---|---|---|
 | FTSO prices | live | hits `coston2-api.flare.network` on every run | |
 | 0G iNFT (token 1) | live | [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) on chainscan.0g.ai | minted 2026-05-04 |
-| 0G storage upload | planned | wallet `0x81e518...` has 0 OG | see `ZERO_G_STORAGE_STATUS.md` |
+| 0G storage upload | live | [`0x9128916b...`](https://chainscan.0g.ai/tx/0x9128916bab7eb7cd7175ce1c201d76e06ec595655d7220b760c5963ceaa978b9) on chainscan.0g.ai | confirmed 2026-05-13 |
 | ENS mint-helper.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | fund `0x5373...6118`, then run `scripts/register_ens.py` |
 | ENS yield-router.eth | code-ready | registration script ready; Sepolia wallet needs 0.05 ETH | same registration run as `mint-helper.eth` |
 | FDC attestation | fixture | demo proof hash; not a real XRPL tx | |
@@ -94,7 +95,7 @@ Proof Artifacts
 | Condition | Label Shown | Resolution |
 |---|---|---|
 | `GOOGLE_API_KEY` not set | deterministic reasoning fallback | Add key to `.env` |
-| 0G wallet unfunded | `[PLANNED — wallet unfunded]` | Top up `0x81e518...` on Chain 16661 |
+| 0G upload unavailable | `[PLANNED — storage mainnet upload pending]` | Check `ZERO_G_STORAGE_STATUS.md` and rerun `make judge` |
 | `UNISWAP_API_KEY` not set | `[FIXTURE — no API key]` | Add key to `.env` |
 | ENS not registered | `[PLANNED — name unregistered]` | Fund `0x5373...6118` with 0.05 Sepolia ETH, dry-run, then run `scripts/register_ens.py` |
 | Gensyn node not connected | `[FIXTURE — local AXL-compatible fallback]` | Connect a real Gensyn node |
