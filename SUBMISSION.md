@@ -1,41 +1,48 @@
-# XRPFi Verifiable Copilot
+# XRPFi Verifiable Copilot — Agent Receipt Explorer
 
-**0G APAC Hackathon 2026 — Track 2: Agentic Trading Arena | by FlareForward**
+**0G APAC Hackathon 2026 | FlareForward**
 
-## What It Does
+## Submission Summary
 
-XRPFi Verifiable Copilot helps XRP holders move toward Flare DeFi without asking them to understand every bridge, oracle, or routing step. Two agents work together: `mint-helper.eth` prepares the FXRP mint path, and `yield-router.eth` chooses a yield route after the mint event is received. Each agent decision is saved as a verifiable record so a judge can inspect what happened and why. 0G provides the proof layer: decision records are designed for decentralized storage, and the demo iNFT on 0G mainnet points to the verifiable agent history. The result is a click-through audit trail for an AI-assisted XRP-to-DeFi flow.
+XRPFi is the flight recorder for AI finance: every agent decision leaves a structured, inspectable receipt. The demo shows an AI-assisted finance flow producing a `DecisionRecord` with inputs, agent identity, decision details, risk notes, proof status, and an on-chain-linked artifact. The strongest proof today is focused and honest: one real 0G iNFT and live FTSO price reads. Everything else is labeled as fixture or planned so judges can see both what works now and what the architecture is prepared to support.
 
 ## Live Proof
 
 - **0G iNFT:** token 1 — [chainscan.0g.ai](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd)
-- **0G Storage:** implemented — mainnet upload pending (see `ZERO_G_STORAGE_STATUS.md`)
-- **ENS:** mint-helper.eth + yield-router.eth (Sepolia registration script ready; live tx pending funded wallet)
-- **Uniswap:** WETH→USDC live quote via Trading API v2 (see `demo/judge_demo.py` step [7])
-- **Gensyn AXL:** cross-node message node A → node B (see `demo/judge_demo.py` step [8])
+- **FTSO prices:** live data from `coston2-api.flare.network` on every run
+
+See [REALITY_MATRIX.md](REALITY_MATRIX.md) for exact live/fixture/planned state.
 
 ## Sponsor Integrations
 
-| Sponsor | What was built | Key files | Evidence |
-|---------|---------------|-----------|----------|
-| 0G | Decentralized storage path for every DecisionRecord + ERC-7857 iNFT on mainnet | `src/integrations/zero_g/` | [chainscan.0g.ai token 1 tx](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) |
-| ENS | Dynamic forward/reverse resolution for both agents (no hardcoding) | `src/integrations/ens/` | `mint-helper.eth`, `yield-router.eth` |
-| Uniswap | Trading API v2 swap quotes for yield routing leg | `src/integrations/uniswap/` | `FEEDBACK.md` |
-| Gensyn | AXL cross-node messaging between mint-helper (node 1) and yield-router (node 2) | `src/gensyn/` | `demo/judge_demo.py` step [8] |
+| Integration | State | Evidence | Notes |
+|---|---|---|---|
+| FTSO prices | live | hits `coston2-api.flare.network` on every run | Receipt input data |
+| 0G iNFT (token 1) | live | [`0xbe0cf7c8...`](https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd) on chainscan.0g.ai | Minted 2026-05-04 |
+| 0G storage upload | planned | wallet `0x81e518...` has 0 OG | See `ZERO_G_STORAGE_STATUS.md` |
+| ENS mint-helper.eth | planned | name unregistered; Sepolia wallet unfunded | Script ready in `scripts/register_ens.py` |
+| ENS yield-router.eth | planned | name unregistered; Sepolia wallet unfunded | |
+| FDC attestation | fixture | demo proof hash; not a real XRPL tx | |
+| FAssets mint | fixture | stub tx params; no on-chain broadcast | |
+| Uniswap WETH/USDC quote | fixture | no API key set; pair unrelated to FXRP | |
+| Gensyn AXL | fixture | in-process `asyncio.Queue`; `force_fallback=True` | |
+| Yield routing | fixture | deterministic 60/40 policy; no live DeFi calls | |
 
 ## How to Run
 
 ```bash
 pip install uv && uv pip install -e ".[dev]"
-cp .env.example .env  # add GOOGLE_API_KEY
+cp .env.example .env
 uv run python demo/judge_demo.py
 ```
-
-See [docs/JUDGES_CHECKLIST.md](docs/JUDGES_CHECKLIST.md) for expected output, fallback explanations, and sponsor integration evidence.
 
 ## Demo Video
 
 Demo video: pending final capture.
+
+## Why It Matters
+
+AI-assisted finance needs receipts before it needs bigger promises. A structured receipt lets users, judges, and builders inspect the data used, the agent identity, the decision made, and the proof status behind each claim. XRPFi demonstrates that pattern with a real 0G iNFT anchor today and a clear path for turning fixture and planned fields into stronger integrations later.
 
 ## GitHub
 
