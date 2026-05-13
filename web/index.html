@@ -3,13 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>XRPFi Verifiable Copilot</title>
+    <title>Agent Receipt Explorer — XRPFi</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="shell">
       <header class="topbar" aria-label="XRPFi status bar">
-        <strong>XRPFi Verifiable Copilot</strong>
+        <div class="brand-lockup">
+          <strong>Agent Receipt Explorer</strong>
+          <span>by FlareForward / XRPFi Verifiable Copilot</span>
+        </div>
         <section class="ticker" aria-label="Live FTSO prices">
           <div>
             <span>FLR/USD</span>
@@ -23,26 +26,32 @@
         </section>
       </header>
 
-      <header class="hero" aria-label="XRPFi demo overview">
+      <section class="reality-strip" aria-label="Integration reality status">
+        <span><strong>Live:</strong> FTSO prices · 0G iNFT</span>
+        <span><strong>Fixture:</strong> FDC · FAssets · Gensyn · ENS</span>
+        <span><strong>Planned:</strong> 0G storage upload</span>
+      </section>
+
+      <header class="hero" aria-label="Agent Receipt Explorer overview">
         <div class="hero-copy">
           <p class="eyebrow">0G APAC Hackathon 2026</p>
-          <h1>XRPFi Verifiable Copilot</h1>
+          <h1>Agent Receipt Explorer</h1>
           <p class="lede">
-            Every AI decision. Permanently verifiable.
+            The flight recorder for AI finance.
           </p>
           <div class="badges" aria-label="Demo capabilities">
-            <span>0G Storage</span>
-            <span>iNFT Proof</span>
-            <span>Flare FTSO</span>
-            <span>FDC Attestation</span>
+            <span>Live FTSO</span>
+            <span>Live 0G iNFT</span>
+            <span>Fixture FDC</span>
+            <span>Fixture Routing</span>
           </div>
         </div>
       </header>
 
       <section class="command-bar" aria-label="Demo controls">
         <div>
-          <span>Scenario</span>
-          <strong>XRPL payment verified, FXRP minted, yield route selected</strong>
+          <span>Receipt demo</span>
+          <strong>Watch an AI agent evaluate a yield route, then inspect the verifiable receipt it leaves behind.</strong>
         </div>
         <button id="run-demo" type="button">
           <span class="button-icon" aria-hidden="true">▶</span>
@@ -53,36 +62,36 @@
       <section class="workspace">
         <aside class="rail" aria-label="Demo flow">
           <ol id="flow-steps">
-            <li data-step="1" class="active">FTSO prices</li>
-            <li data-step="2">ENS agents</li>
-            <li data-step="3">FDC attestation</li>
-            <li data-step="4">FXRP mint</li>
-            <li data-step="5">Yield route</li>
-            <li data-step="6">0G storage</li>
-            <li data-step="7">Uniswap quote</li>
-            <li data-step="8">Gensyn AXL</li>
-            <li data-step="9">0G storage</li>
-            <li data-step="10">iNFT proof</li>
+            <li data-step="1" class="active">Live FTSO inputs</li>
+            <li data-step="2">mint-helper.eth</li>
+            <li data-step="3">yield-router.eth</li>
+            <li data-step="4">FDC proof fixture</li>
+            <li data-step="5">FAssets fixture</li>
+            <li data-step="6">Route decision</li>
+            <li data-step="7">Quote fixture</li>
+            <li data-step="8">Gensyn handoff</li>
+            <li data-step="9">Storage status</li>
+            <li data-step="10">0G iNFT artifact</li>
           </ol>
         </aside>
 
         <section class="panel" aria-live="polite">
-          <section class="live-steps" aria-label="Live judge demo steps">
+          <section class="live-steps" aria-label="Receipt assembly events">
             <div class="section-heading">
-              <h2>Steps</h2>
+              <h2>Receipt Assembly</h2>
               <span id="step-status">Waiting</span>
             </div>
             <ol id="steps" class="step-list">
-              <li data-step="1"><span>01</span><strong>FTSO live prices</strong><p>Waiting</p></li>
-              <li data-step="2"><span>02</span><strong>ENS resolved</strong><p>Waiting</p></li>
-              <li data-step="3"><span>03</span><strong>ENS resolved</strong><p>Waiting</p></li>
-              <li data-step="4"><span>04</span><strong>FDC attestation</strong><p>Waiting</p></li>
-              <li data-step="5"><span>05</span><strong>FXRP minted</strong><p>Waiting</p></li>
-              <li data-step="6"><span>06</span><strong>Yield routed</strong><p>Waiting</p></li>
-              <li data-step="7"><span>07</span><strong>Uniswap quote</strong><p>Waiting</p></li>
-              <li data-step="8"><span>08</span><strong>Gensyn AXL</strong><p>Waiting</p></li>
-              <li data-step="9"><span>09</span><strong>0G storage</strong><p>Waiting</p></li>
-              <li data-step="10"><span>10</span><strong>iNFT minted</strong><p>Waiting</p></li>
+              <li data-step="1"><span>01</span><strong>Data inputs</strong><p>Waiting</p></li>
+              <li data-step="2"><span>02</span><strong>Agent identity</strong><p>Waiting</p></li>
+              <li data-step="3"><span>03</span><strong>Agent identity</strong><p>Waiting</p></li>
+              <li data-step="4"><span>04</span><strong>Payment proof</strong><p>Waiting</p></li>
+              <li data-step="5"><span>05</span><strong>Mint decision</strong><p>Waiting</p></li>
+              <li data-step="6"><span>06</span><strong>Route decision</strong><p>Waiting</p></li>
+              <li data-step="7"><span>07</span><strong>Quote input</strong><p>Waiting</p></li>
+              <li data-step="8"><span>08</span><strong>Agent handoff</strong><p>Waiting</p></li>
+              <li data-step="9"><span>09</span><strong>Storage status</strong><p>Waiting</p></li>
+              <li data-step="10"><span>10</span><strong>On-chain artifact</strong><p>Waiting</p></li>
             </ol>
           </section>
 
@@ -97,13 +106,13 @@
               <div class="flow-node">
                 <span>02</span>
                 <strong>mint-helper.eth</strong>
-                <p>FDC-backed FXRP path</p>
+                <p>Prepares the mint receipt</p>
               </div>
               <div class="flow-link"></div>
               <div class="flow-node">
                 <span>03</span>
                 <strong>Gensyn AXL</strong>
-                <p>Node A to node B handoff</p>
+                <p>Local handoff fixture</p>
               </div>
               <div class="flow-link"></div>
               <div class="flow-node">
@@ -115,7 +124,7 @@
               <div class="flow-node">
                 <span>05</span>
                 <strong>0G Storage</strong>
-                <p>Decision bundle persisted</p>
+                <p>Upload status labeled</p>
               </div>
               <div class="flow-link"></div>
               <div class="flow-node">
@@ -126,18 +135,18 @@
             </section>
 
             <section class="ready-copy">
-              <h2>Ready for judge review</h2>
+              <h2>Ready to generate a receipt</h2>
               <p>
-                Launch the end-to-end XRP to FXRP to Flare DeFi flow and inspect the
-                verifiable decision trail in one place.
+                Run the demo to produce a structured agent receipt with inputs,
+                decisions, proof status, and the public iNFT artifact in one view.
               </p>
             </section>
           </div>
 
           <div id="loading-state" class="loading-state hidden">
             <div class="spinner" aria-hidden="true"></div>
-            <h2>Running agent flow</h2>
-            <p>Fetching prices, resolving agents, routing yield, and minting proof.</p>
+            <h2>Building receipt</h2>
+            <p>Collecting inputs, decisions, proof labels, and the iNFT artifact.</p>
           </div>
 
           <div id="error-state" class="error-state hidden">
@@ -156,25 +165,17 @@
                 <strong id="fxrp-amount">-</strong>
               </article>
               <article>
-                <span>Decisions</span>
+                <span>Receipt records</span>
                 <strong id="decision-count">-</strong>
               </article>
             </div>
 
-            <div class="split">
-              <section>
-                <h2>Agent Identities</h2>
-                <div id="agents" class="stack"></div>
-              </section>
-              <section>
-                <h2>FTSO Snapshot</h2>
-                <div id="prices" class="stack"></div>
-              </section>
-            </div>
-
-            <section>
-              <h2>Decision Records</h2>
-              <div id="decisions" class="decision-list"></div>
+            <section class="receipt-section" aria-label="Generated agent receipts">
+              <div class="section-heading">
+                <h2>Agent Receipts</h2>
+                <span id="receipt-id">Pending</span>
+              </div>
+              <div id="receipts" class="receipt-list"></div>
             </section>
 
             <section class="proof-band">

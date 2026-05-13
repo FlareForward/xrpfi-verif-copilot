@@ -32,6 +32,9 @@ const formatNumber = (value, digits = 2) =>
 
 const formatUsd = (value, digits = 2) => `$${formatNumber(value, digits)}`;
 
+const ZERO_G_INFT_URL =
+  "https://chainscan.0g.ai/tx/0xbe0cf7c81658751ec40d67d871a996bba5799061348f4fe916c190f05aff9edd";
+
 const formatTimestamp = (timestamp) => {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -157,6 +160,119 @@ const priceTags = (prices = []) =>
     )
     .join("");
 
+const statusBadge = (status, label = status) =>
+  `<span class="status-badge status-${escapeHtml(status.toLowerCase())}">${escapeHtml(label)}</span>`;
+
+const receiptRow = (label, value, status, statusLabel = status) => `
+  <div class="receipt-row">
+    <dt>${escapeHtml(label)}</dt>
+    <dd>
+      <span>${escapeHtml(value || "Unavailable")}</span>
+      ${statusBadge(status, statusLabel)}
+    </dd>
+  </div>
+`;
+
+const receiptTimestamp = (result, record) =>
+  result.session?.timestamp || record.timestamp || new Date().toISOString();
+
+const receiptId = (result, index) => {
+  const sessionId = result.session?.session_id || "session pending";
+  return `${sessionId}${result.decisions.length > 1 ? `-${index + 1}` : ""}`;
+};
+
+const agentRole = (agentEns = "") =>
+  agentEns.includes("yield-router") ? "yield-router.eth" : "mint-helper.eth";
+
+const inputRows = (record) => {
+  const rows = (record.ftso_prices || []).map((price) =>
+    receiptRow(
+      price.feed_name,
+      `${formatUsd(price.price_usd, 4)} · feed ${truncateHash(price.feed_id)}`,
+      price.is_stale ? "FIXTURE" : "LIVE",
+      price.is_stale ? "FIXTURE" : "LIVE",
+    ),
+  );
+
+  if (record.fdc_proof) {
+    rows.push(
+      receiptRow(
+        "FDC proof",
+        record.fdc_proof.proof_hash,
+        record.fdc_proof.verified ? "LIVE" : "FIXTURE",
+        record.fdc_proof.verified ? "LIVE" : "FIXTURE",
+      ),
+    );
+  }
+
+  if (record.action_type === "route") {
+    rows.push(receiptRow("Uniswap quote", "WETH/USDC quote fixture", "FIXTURE"));
+  }
+
+  return rows.join("");
+};
+
+const proofRows = (record) => {
+  const rows = [
+    receiptRow("Agent identity", agentRole(record.agent_ens), "FIXTURE"),
+    receiptRow("FAssets mint", "Stub transaction parameters; no broadcast", "FIXTURE"),
+    receiptRow("Gensyn AXL", "Local AXL-compatible handoff", "FIXTURE"),
+    receiptRow("0G storage", "Upload planned; local SHA-256 fallback", "PLANNED"),
+  ];
+
+  const inftUrl = record.zero_g?.inft_explorer_url || ZERO_G_INFT_URL;
+  rows.push(
+    `
+      <div class="receipt-row">
+        <dt>0G iNFT</dt>
+        <dd>
+          <a href="${escapeHtml(inftUrl)}" target="_blank" rel="noreferrer">
+            token=${escapeHtml(record.zero_g?.inft_token_id || "1")}
+          </a>
+          ${statusBadge("LIVE")}
+        </dd>
+      </div>
+    `,
+  );
+
+  return rows.join("");
+};
+
+const receiptCard = (result, record, index) => `
+  <article class="receipt-card">
+    <header class="receipt-card-header">
+      <div>
+        <span>Receipt ID</span>
+        <strong>${escapeHtml(receiptId(result, index))}</strong>
+      </div>
+      <time datetime="${escapeHtml(receiptTimestamp(result, record))}">
+        ${escapeHtml(formatSessionTimestamp(receiptTimestamp(result, record)))}
+      </time>
+    </header>
+
+    <section class="receipt-block">
+      <h3>Agent</h3>
+      <p>${escapeHtml(agentRole(record.agent_ens))}</p>
+    </section>
+
+    <section class="receipt-block">
+      <h3>Data Inputs Used</h3>
+      <dl>${inputRows(record)}</dl>
+    </section>
+
+    <section class="receipt-block">
+      <h3>Decision Taken</h3>
+      <p>${escapeHtml(record.action_taken || record.result_summary || "Decision unavailable")}</p>
+      <small>${escapeHtml(record.reasoning || "No reasoning supplied.")}</small>
+    </section>
+
+    <section class="receipt-block">
+      <h3>Proof Status</h3>
+      <dl>${proofRows(record)}</dl>
+    </section>
+  </article>
+`;
+
 const item = (label, title, detail) => `
   <article class="item">
     <span>${escapeHtml(label)}</span>
@@ -250,23 +366,10 @@ const renderResult = (result) => {
   document.querySelector("#xrp-amount").textContent = `${formatNumber(result.xrp_amount)} XRP`;
   document.querySelector("#fxrp-amount").textContent = `${formatNumber(result.fxrp_minted)} FXRP`;
   document.querySelector("#decision-count").textContent = result.decisions.length;
-
-  document.querySelector("#agents").innerHTML = result.agents
-    .map((agent) => item(agent.ens, agent.address, "Resolved identity used by the agent flow."))
-    .join("");
-
-  document.querySelector("#prices").innerHTML = result.prices
-    .map((price) =>
-      item(
-        price.feed_name,
-        formatUsd(price.price_usd, 4),
-        `Feed ${price.feed_id.slice(0, 18)}... ${price.is_stale ? "cached fallback" : "live read"}`,
-      ),
-    )
-    .join("");
-
-  document.querySelector("#decisions").innerHTML = result.decisions
-    .map((record, index) => decision(record, index))
+  document.querySelector("#receipt-id").textContent =
+    result.session?.session_id || "session unavailable";
+  document.querySelector("#receipts").innerHTML = result.decisions
+    .map((record, index) => receiptCard(result, record, index))
     .join("");
 
   const proofUrl = result.inft_url || "#";
