@@ -14,7 +14,7 @@ from web3 import Web3
 DEFAULT_RPC_URL: Final = "https://0g-rpc.publicnode.com"
 DEFAULT_CHAIN_ID: Final = 16661
 DEFAULT_MIN_BALANCE_OG: Final = Decimal("0.1")
-DEPLOYER_ADDRESS: Final = "0x81e51856d72023490cF7DEc1A6717f4269028F95"
+DEPLOYER_ADDRESS: Final = "0x53730993203f21b9ac8d10a8CA5CA5d92b036118"
 EXPLORER_URL: Final = f"https://chainscan.0g.ai/address/{DEPLOYER_ADDRESS}"
 
 
