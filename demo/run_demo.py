@@ -56,17 +56,21 @@ def is_test_ens_address(address: str) -> bool:
 
 async def resolve_ens_identity(name: str) -> dict[str, str | bool]:
     """Resolve an ENS identity and classify it as live or planned."""
+    from src.config import get_settings
     from src.integrations.ens.resolver import TEST_ADDRESSES, EnsResolver
 
+    settings = get_settings()
+    resolver = EnsResolver(sepolia_rpc_url=settings.eth_sepolia_rpc_url or None)
     try:
-        address = await EnsResolver().resolve(name)
+        address, is_live = await resolver.resolve_with_status(name)
     except Exception as exc:
         log.warning("ens_fallback", name=name, reason=str(exc))
         address = TEST_ADDRESSES.get(name, f"0xENS_DEMO_{name.replace('.eth', '').upper()}")
+        is_live = False
     return {
         "ens": name,
         "address": address,
-        "is_live": not is_test_ens_address(address),
+        "is_live": is_live,
     }
 
 

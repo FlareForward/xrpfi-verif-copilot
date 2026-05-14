@@ -31,16 +31,27 @@ from web3.types import TxParams, Wei
 from src.config import get_settings
 from src.integrations.ens.resolver import EnsResolver
 
-ETH_REGISTRAR_CONTROLLER: Final = "0xFED6a969AaA60E4961FCD3EBF1A2e8913ac65B16"
-PUBLIC_RESOLVER: Final = "0x8FADE66B79cC9f707aB26799354482EB93a5B7dD"
+ETH_REGISTRAR_CONTROLLER: Final = "0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968"
+PUBLIC_RESOLVER: Final = "0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5"
 REGISTRATION_DURATION_SECONDS: Final = 31_536_000
 MIN_BALANCE_ETH: Final = Decimal("0.05")
 NAMES: Final = ("mint-helper", "yield-router")
 type PriceResponse = tuple[int, int] | list[int] | dict[str, int] | int
 
+_REGISTRATION_STRUCT: Final[list[dict[str, object]]] = [
+    {"internalType": "string", "name": "label", "type": "string"},
+    {"internalType": "address", "name": "owner", "type": "address"},
+    {"internalType": "uint256", "name": "duration", "type": "uint256"},
+    {"internalType": "bytes32", "name": "secret", "type": "bytes32"},
+    {"internalType": "address", "name": "resolver", "type": "address"},
+    {"internalType": "bytes[]", "name": "data", "type": "bytes[]"},
+    {"internalType": "uint8", "name": "reverseRecord", "type": "uint8"},
+    {"internalType": "bytes32", "name": "referrer", "type": "bytes32"},
+]
+
 CONTROLLER_ABI: Final[list[dict[str, object]]] = [
     {
-        "inputs": [{"internalType": "string", "name": "name", "type": "string"}],
+        "inputs": [{"internalType": "string", "name": "label", "type": "string"}],
         "name": "available",
         "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
         "stateMutability": "view",
@@ -55,17 +66,15 @@ CONTROLLER_ABI: Final[list[dict[str, object]]] = [
     },
     {
         "inputs": [
-            {"internalType": "string", "name": "name", "type": "string"},
-            {"internalType": "address", "name": "owner", "type": "address"},
-            {"internalType": "uint256", "name": "duration", "type": "uint256"},
-            {"internalType": "bytes32", "name": "secret", "type": "bytes32"},
-            {"internalType": "address", "name": "resolver", "type": "address"},
-            {"internalType": "bytes[]", "name": "data", "type": "bytes[]"},
-            {"internalType": "bool", "name": "reverseRecord", "type": "bool"},
-            {"internalType": "uint16", "name": "ownerControlledFuses", "type": "uint16"},
+            {
+                "components": _REGISTRATION_STRUCT,
+                "internalType": "struct IETHRegistrarController.Registration",
+                "name": "registration",
+                "type": "tuple",
+            }
         ],
         "name": "makeCommitment",
-        "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+        "outputs": [{"internalType": "bytes32", "name": "commitment", "type": "bytes32"}],
         "stateMutability": "pure",
         "type": "function",
     },
@@ -78,7 +87,7 @@ CONTROLLER_ABI: Final[list[dict[str, object]]] = [
     },
     {
         "inputs": [
-            {"internalType": "string", "name": "name", "type": "string"},
+            {"internalType": "string", "name": "label", "type": "string"},
             {"internalType": "uint256", "name": "duration", "type": "uint256"},
         ],
         "name": "rentPrice",
@@ -98,14 +107,12 @@ CONTROLLER_ABI: Final[list[dict[str, object]]] = [
     },
     {
         "inputs": [
-            {"internalType": "string", "name": "name", "type": "string"},
-            {"internalType": "address", "name": "owner", "type": "address"},
-            {"internalType": "uint256", "name": "duration", "type": "uint256"},
-            {"internalType": "bytes32", "name": "secret", "type": "bytes32"},
-            {"internalType": "address", "name": "resolver", "type": "address"},
-            {"internalType": "bytes[]", "name": "data", "type": "bytes[]"},
-            {"internalType": "bool", "name": "reverseRecord", "type": "bool"},
-            {"internalType": "uint16", "name": "ownerControlledFuses", "type": "uint16"},
+            {
+                "components": _REGISTRATION_STRUCT,
+                "internalType": "struct IETHRegistrarController.Registration",
+                "name": "registration",
+                "type": "tuple",
+            }
         ],
         "name": "register",
         "outputs": [],
@@ -244,21 +251,14 @@ def register_name(
     full_name = f"{label}.eth"
     owner = Web3.to_checksum_address(account.address)
     resolver_address = Web3.to_checksum_address(PUBLIC_RESOLVER)
-    setup_data: list[str] = [resolver_set_addr_data(resolver, full_name, owner)]
+    setup_data: list[bytes] = [bytes.fromhex(resolver_set_addr_data(resolver, full_name, owner)[2:])]
 
     available = bool(controller.functions.available(label).call())
     if not available:
         raise RuntimeError(f"{full_name} is not available on this controller")
 
     commitment = controller.functions.makeCommitment(
-        label,
-        owner,
-        duration,
-        secret,
-        resolver_address,
-        setup_data,
-        False,
-        0,
+        (label, owner, duration, secret, resolver_address, setup_data, 0, b"\x00" * 32)
     ).call()
     commitment_hex = Web3.to_hex(commitment)
 
@@ -280,14 +280,7 @@ def register_name(
 
     price = price_to_wei(controller.functions.rentPrice(label, duration).call())
     tx = controller.functions.register(
-        label,
-        owner,
-        duration,
-        secret,
-        resolver_address,
-        setup_data,
-        False,
-        0,
+        (label, owner, duration, secret, resolver_address, setup_data, 0, b"\x00" * 32)
     ).build_transaction({"value": int(price * 110 // 100), "gas": 500_000})
     register_tx = transact(w3, account, tx)
     print(f"{full_name}: register tx {register_tx}")

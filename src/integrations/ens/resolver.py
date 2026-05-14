@@ -57,9 +57,13 @@ class EnsResolver:
         self,
         rpc_url: str = ETH_MAINNET_RPC,
         timeout: float = 15.0,
+        sepolia_rpc_url: str | None = None,
     ) -> None:
         self._rpc_url = rpc_url
         self._timeout = timeout
+        # Sepolia fallback: if set, live resolution is attempted there too.
+        # Names registered on Sepolia count as is_live=True for hackathon demos.
+        self._sepolia_rpc_url = sepolia_rpc_url
         self._w3: object | None = None
 
     # ------------------------------------------------------------------
@@ -201,15 +205,27 @@ class EnsResolver:
         """
         logger.info("ENS: resolve_with_status(%s)", name)
 
-        # Attempt live resolution
+        # Attempt live resolution (mainnet)
         address = await self._resolve_via_web3(name)
 
         if address is None:
             address = await self._resolve_via_rpc(name)
 
         if address is not None:
-            logger.info("ENS: %s → %s (live)", name, address)
+            logger.info("ENS: %s → %s (live, mainnet)", name, address)
             return address, True
+
+        # Try Sepolia if configured — names registered on testnet count as live
+        # for hackathon / pre-production demos.
+        if self._sepolia_rpc_url:
+            try:
+                sepolia_resolver = EnsResolver(rpc_url=self._sepolia_rpc_url, timeout=self._timeout)
+                address = await sepolia_resolver._resolve_via_rpc(name)
+                if address is not None:
+                    logger.info("ENS: %s → %s (live, sepolia)", name, address)
+                    return address, True
+            except Exception as exc:
+                logger.debug("ENS: Sepolia resolution failed for %s: %s", name, exc)
 
         # Fallback for unregistered hackathon names
         if name in TEST_ADDRESSES:
